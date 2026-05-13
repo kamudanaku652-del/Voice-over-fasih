@@ -149,21 +149,44 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   };
 
   const [showEffects, setShowEffects] = useState(false);
+  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic'>('neutral');
   const [effects, setEffects] = useState({
     gate: -45,
-    clarity: 5,
-    compression: -24
+    clarity: 6,
+    compression: -22,
+    deEsser: -10,
+    proximity: 4,
+    limit: -1
   });
 
   // Audio Context for Processing
   const audioCtx = useRef<AudioContext | null>(null);
   const compressor = useRef<DynamicsCompressorNode | null>(null);
-  const eq = useRef<BiquadFilterNode | null>(null);
+  const limiter = useRef<DynamicsCompressorNode | null>(null);
+  const clarityEq = useRef<BiquadFilterNode | null>(null);
+  const proximityEq = useRef<BiquadFilterNode | null>(null);
+  const deEsser = useRef<BiquadFilterNode | null>(null);
+
+  const applyPreset = (type: 'neutral' | 'deep' | 'news' | 'cinematic') => {
+    setActivePreset(type);
+    switch(type) {
+      case 'deep':
+        setEffects({ gate: -40, clarity: 4, compression: -18, deEsser: -12, proximity: 8, limit: -1 });
+        break;
+      case 'news':
+        setEffects({ gate: -35, clarity: 10, compression: -24, deEsser: -8, proximity: 2, limit: -0.5 });
+        break;
+      case 'cinematic':
+        setEffects({ gate: -50, clarity: 12, compression: -20, deEsser: -15, proximity: 5, limit: -1 });
+        break;
+      default:
+        setEffects({ gate: -45, clarity: 6, compression: -22, deEsser: -10, proximity: 4, limit: -1 });
+    }
+  };
 
   // Initialize Audio Processing Chain
   useEffect(() => {
     if (wavesurfer.current) {
-      // Connect Wavesurfer to our processing chain
       const ws = wavesurfer.current;
       ws.on('ready', () => {
         const mediaElement = ws.getMediaElement();
@@ -171,16 +194,38 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)();
           const source = audioCtx.current.createMediaElementSource(mediaElement);
           
+          proximityEq.current = audioCtx.current.createBiquadFilter();
+          proximityEq.current.type = 'lowshelf';
+          proximityEq.current.frequency.value = 150;
+
+          deEsser.current = audioCtx.current.createBiquadFilter();
+          deEsser.current.type = 'peaking';
+          deEsser.current.frequency.value = 6500;
+          deEsser.current.Q.value = 3;
+
+          clarityEq.current = audioCtx.current.createBiquadFilter();
+          clarityEq.current.type = 'highshelf';
+          clarityEq.current.frequency.value = 5000;
+
           compressor.current = audioCtx.current.createDynamicsCompressor();
-          eq.current = audioCtx.current.createBiquadFilter();
+          compressor.current.threshold.value = -24;
+          compressor.current.knee.value = 30;
+          compressor.current.ratio.value = 12;
+
+          limiter.current = audioCtx.current.createDynamicsCompressor();
+          limiter.current.threshold.value = -1;
+          limiter.current.knee.value = 0;
+          limiter.current.ratio.value = 20;
+          limiter.current.attack.value = 0.001;
+          limiter.current.release.value = 0.1;
           
-          eq.current.type = 'highshelf';
-          eq.current.frequency.value = 5000;
-          
-          // Chain: Source -> EQ -> Compressor -> Destination
-          source.connect(eq.current);
-          eq.current.connect(compressor.current);
-          compressor.current.connect(audioCtx.current.destination);
+          // Chain: Source -> DeEsser -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
+          source.connect(deEsser.current);
+          deEsser.current.connect(proximityEq.current);
+          proximityEq.current.connect(clarityEq.current);
+          clarityEq.current.connect(compressor.current);
+          compressor.current.connect(limiter.current);
+          limiter.current.connect(audioCtx.current.destination);
         }
       });
     }
@@ -190,10 +235,18 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   useEffect(() => {
     if (compressor.current) {
       compressor.current.threshold.setValueAtTime(effects.compression, audioCtx.current!.currentTime);
-      compressor.current.ratio.setValueAtTime(4, audioCtx.current!.currentTime);
     }
-    if (eq.current) {
-      eq.current.gain.setValueAtTime(effects.clarity, audioCtx.current!.currentTime);
+    if (limiter.current) {
+      limiter.current.threshold.setValueAtTime(effects.limit, audioCtx.current!.currentTime);
+    }
+    if (clarityEq.current) {
+      clarityEq.current.gain.setValueAtTime(effects.clarity, audioCtx.current!.currentTime);
+    }
+    if (proximityEq.current) {
+      proximityEq.current.gain.setValueAtTime(effects.proximity, audioCtx.current!.currentTime);
+    }
+    if (deEsser.current) {
+      deEsser.current.gain.setValueAtTime(effects.deEsser, audioCtx.current!.currentTime);
     }
   }, [effects]);
 
@@ -305,47 +358,90 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
       {/* Mastering Rack (Conditional) */}
       {showEffects && (
-        <div className="bg-[#000] border border-neon/20 rounded-3xl p-8 grid grid-cols-1 md:grid-cols-3 gap-8 shadow-[0_0_50px_rgba(201,255,0,0.05)] animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Noise_Gate (Hiss Filter)</span>
-              <span className="text-neon font-mono text-[10px]">{effects.gate}dB</span>
+        <div className="bg-[#000] border border-neon/20 rounded-[40px] p-12 space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700">
+          {/* Preset Selector */}
+          <div className="flex flex-col gap-6">
+            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Documentary_Master_Profiles</p>
+            <div className="flex flex-wrap gap-4">
+              {[
+                { id: 'neutral', name: 'Original_Studio', icon: Activity },
+                { id: 'deep', name: 'Deep_Narrative', icon: Headphones },
+                { id: 'news', name: 'World_Report', icon: Radio },
+                { id: 'cinematic', name: 'Cinematic_Air', icon: Wand2 }
+              ].map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => applyPreset(p.id as any)}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-2xl border transition-all font-black text-xs uppercase italic tracking-widest",
+                    activePreset === p.id 
+                      ? "bg-neon border-neon text-black shadow-[0_0_30px_#C9FF00]" 
+                      : "bg-[#111] border-studio-border text-zinc-500 hover:border-neon/50 hover:text-white"
+                  )}
+                >
+                  <p.icon size={16} />
+                  {p.name}
+                </button>
+              ))}
             </div>
-            <input 
-              type="range" min="-100" max="0" step="1" 
-              value={effects.gate} 
-              onChange={(e) => setEffects({...effects, gate: parseInt(e.target.value)})}
-              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
-            />
-            <p className="text-[9px] text-zinc-700 uppercase font-bold">Cuts silence between words</p>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Vocal_Clarity (Air)</span>
-              <span className="text-neon font-mono text-[10px]">{effects.clarity}dB</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 border-t border-studio-border pt-12">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">De-Esser</span>
+                <span className="text-neon font-mono text-xs">{effects.deEsser}dB</span>
+              </div>
+              <input 
+                type="range" min="-40" max="0" step="1" 
+                value={effects.deEsser} 
+                onChange={(e) => setEffects({...effects, deEsser: parseInt(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Sharpness Removal</p>
             </div>
-            <input 
-              type="range" min="0" max="20" step="1" 
-              value={effects.clarity} 
-              onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
-              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
-            />
-            <p className="text-[9px] text-zinc-700 uppercase font-bold">Boosts high-end for "Fasih" sound</p>
-          </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Studio_Glue (Comp)</span>
-              <span className="text-neon font-mono text-[10px]">{effects.compression}dB</span>
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Proximity</span>
+                <span className="text-neon font-mono text-xs">+{effects.proximity}dB</span>
+              </div>
+              <input 
+                type="range" min="0" max="15" step="1" 
+                value={effects.proximity} 
+                onChange={(e) => setEffects({...effects, proximity: parseInt(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Documentary Depth</p>
             </div>
-            <input 
-              type="range" min="-60" max="0" step="1" 
-              value={effects.compression} 
-              onChange={(e) => setEffects({...effects, compression: parseInt(e.target.value)})}
-              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
-            />
-            <p className="text-[9px] text-zinc-700 uppercase font-bold">Even out volume for fast reading</p>
+
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Clarity</span>
+                <span className="text-neon font-mono text-xs">+{effects.clarity}dB</span>
+              </div>
+              <input 
+                type="range" min="0" max="20" step="1" 
+                value={effects.clarity} 
+                onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Voice Definition</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Safe_Peak</span>
+                <span className="text-neon font-mono text-xs">{effects.limit}dB</span>
+              </div>
+              <input 
+                type="range" min="-10" max="0" step="0.5" 
+                value={effects.limit} 
+                onChange={(e) => setEffects({...effects, limit: parseFloat(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Zero-Clip Limiter</p>
+            </div>
           </div>
         </div>
       )}
