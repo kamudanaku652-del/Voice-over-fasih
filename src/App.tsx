@@ -87,16 +87,16 @@ export default function App() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                          <div className="w-2 h-2 bg-neon rounded-full animate-pulse" />
-                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">Production_Environment_Console</p>
+                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">ID_Documentary_Mode_Active</p>
                       </div>
                       <h2 className="text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
-                        Record<span className="text-neon">_Desk</span>
+                        Master<span className="text-neon">_Rack</span>
                       </h2>
                     </div>
                     <div className="flex items-center gap-8 text-[11px] font-black text-zinc-500 uppercase tracking-widest italic border border-studio-border px-6 py-3 rounded-2xl bg-black/50">
-                      <span className="flex items-center gap-2 decoration-neon hover:underline cursor-none transition-all"><Signal size={14} className="text-neon" /> 48khz_HD</span>
+                      <span className="flex items-center gap-2 decoration-neon hover:underline cursor-none transition-all"><Signal size={14} className="text-neon" /> 48khz_Lossless</span>
                       <div className="w-px h-4 bg-zinc-800" />
-                      <span className="flex items-center gap-2 transition-all"><Cpu size={14} className="text-neon" /> AI_Engine_v2</span>
+                      <span className="flex items-center gap-2 transition-all"><Cpu size={14} className="text-neon" /> Clear_VO_v4.2</span>
                     </div>
                   </div>
 

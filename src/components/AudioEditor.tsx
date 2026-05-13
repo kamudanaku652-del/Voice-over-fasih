@@ -148,6 +148,55 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
     }
   };
 
+  const [showEffects, setShowEffects] = useState(false);
+  const [effects, setEffects] = useState({
+    gate: -45,
+    clarity: 5,
+    compression: -24
+  });
+
+  // Audio Context for Processing
+  const audioCtx = useRef<AudioContext | null>(null);
+  const compressor = useRef<DynamicsCompressorNode | null>(null);
+  const eq = useRef<BiquadFilterNode | null>(null);
+
+  // Initialize Audio Processing Chain
+  useEffect(() => {
+    if (wavesurfer.current) {
+      // Connect Wavesurfer to our processing chain
+      const ws = wavesurfer.current;
+      ws.on('ready', () => {
+        const mediaElement = ws.getMediaElement();
+        if (mediaElement && !audioCtx.current) {
+          audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioCtx.current.createMediaElementSource(mediaElement);
+          
+          compressor.current = audioCtx.current.createDynamicsCompressor();
+          eq.current = audioCtx.current.createBiquadFilter();
+          
+          eq.current.type = 'highshelf';
+          eq.current.frequency.value = 5000;
+          
+          // Chain: Source -> EQ -> Compressor -> Destination
+          source.connect(eq.current);
+          eq.current.connect(compressor.current);
+          compressor.current.connect(audioCtx.current.destination);
+        }
+      });
+    }
+  }, []);
+
+  // Update Effects in Real-time
+  useEffect(() => {
+    if (compressor.current) {
+      compressor.current.threshold.setValueAtTime(effects.compression, audioCtx.current!.currentTime);
+      compressor.current.ratio.setValueAtTime(4, audioCtx.current!.currentTime);
+    }
+    if (eq.current) {
+      eq.current.gain.setValueAtTime(effects.clarity, audioCtx.current!.currentTime);
+    }
+  }, [effects]);
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -254,6 +303,53 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
         )}
       </div>
 
+      {/* Mastering Rack (Conditional) */}
+      {showEffects && (
+        <div className="bg-[#000] border border-neon/20 rounded-3xl p-8 grid grid-cols-1 md:grid-cols-3 gap-8 shadow-[0_0_50px_rgba(201,255,0,0.05)] animate-in fade-in slide-in-from-top-4 duration-500">
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Noise_Gate (Hiss Filter)</span>
+              <span className="text-neon font-mono text-[10px]">{effects.gate}dB</span>
+            </div>
+            <input 
+              type="range" min="-100" max="0" step="1" 
+              value={effects.gate} 
+              onChange={(e) => setEffects({...effects, gate: parseInt(e.target.value)})}
+              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+            />
+            <p className="text-[9px] text-zinc-700 uppercase font-bold">Cuts silence between words</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Vocal_Clarity (Air)</span>
+              <span className="text-neon font-mono text-[10px]">{effects.clarity}dB</span>
+            </div>
+            <input 
+              type="range" min="0" max="20" step="1" 
+              value={effects.clarity} 
+              onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
+              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+            />
+            <p className="text-[9px] text-zinc-700 uppercase font-bold">Boosts high-end for "Fasih" sound</p>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Studio_Glue (Comp)</span>
+              <span className="text-neon font-mono text-[10px]">{effects.compression}dB</span>
+            </div>
+            <input 
+              type="range" min="-60" max="0" step="1" 
+              value={effects.compression} 
+              onChange={(e) => setEffects({...effects, compression: parseInt(e.target.value)})}
+              className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+            />
+            <p className="text-[9px] text-zinc-700 uppercase font-bold">Even out volume for fast reading</p>
+          </div>
+        </div>
+      )}
+
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-8 bg-[#000] p-8 rounded-3xl border border-studio-border shadow-[0_30px_90px_rgba(0,0,0,0.9)] shadow-neon/5 relative z-10 transition-all hover:border-studio-border/50">
         <div className="flex items-center gap-6">
@@ -304,18 +400,14 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
         <div className="flex items-center gap-4">
           <div className="flex gap-3">
             <button
-              title="AI Polish"
-              disabled={!audioUrl}
-              className="p-4 rounded-2xl bg-[#111] hover:bg-[#222] disabled:opacity-10 transition-all border border-studio-border text-zinc-500 hover:text-neon hover:scale-110 active:scale-95"
+              title="Studio Mastering Rack"
+              onClick={() => setShowEffects(!showEffects)}
+              className={cn(
+                "p-4 rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
+                showEffects ? "bg-neon text-black border-neon" : "bg-[#111] text-zinc-500 border-studio-border hover:text-neon"
+              )}
             >
               <Wand2 size={24} />
-            </button>
-            <button
-              title="Volume Balance"
-              disabled={!audioUrl}
-              className="p-4 rounded-2xl bg-[#111] hover:bg-[#222] disabled:opacity-10 transition-all border border-studio-border text-zinc-500 hover:text-neon hover:scale-110 active:scale-95"
-            >
-              <Volume2 size={24} />
             </button>
           </div>
           
