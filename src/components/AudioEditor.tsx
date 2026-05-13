@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones } from 'lucide-react';
+import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones, Radio } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 interface AudioEditorProps {
