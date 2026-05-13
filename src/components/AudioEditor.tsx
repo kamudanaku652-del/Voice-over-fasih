@@ -552,21 +552,21 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-12 border-t border-studio-border pt-8 md:pt-12">
             <div className="lg:col-span-1 space-y-4 md:space-y-6 bg-neon/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-neon/20 shadow-[0_0_40px_rgba(201,255,0,0.05)]">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Alan_Clean_Bass</span>
-                <span className="text-neon font-mono text-[10px] md:text-xs">{(effects.cleanPunch * 100).toFixed(0)}%</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Peredam_Otomatis</span>
+                <span className="text-neon font-mono text-[10px] md:text-xs">{Math.abs(effects.gate)}%</span>
               </div>
               <input 
-                type="range" min="0" max="1" step="0.01" 
-                value={effects.cleanPunch} 
-                onChange={(e) => setEffects({...effects, cleanPunch: parseFloat(e.target.value)})}
+                type="range" min="-100" max="0" step="1" 
+                value={effects.gate} 
+                onChange={(e) => setEffects({...effects, gate: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest italic leading-relaxed">Noise Reduction + Big Bass Engine</p>
+              <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest italic leading-relaxed">Menghilangkan desis & kebisingan ruangan</p>
             </div>
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">De-Esser</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Penghilang_Hiss</span>
                 <span className="text-neon font-mono text-xs">{effects.deEsser}dB</span>
               </div>
               <input 
@@ -575,12 +575,12 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 onChange={(e) => setEffects({...effects, deEsser: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Sharpness Removal</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Menghapus suara tajam (S/T)</p>
             </div>
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Proximity</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Kedalaman_Bass</span>
                 <span className="text-neon font-mono text-xs">+{effects.proximity}dB</span>
               </div>
               <input 
@@ -589,12 +589,12 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 onChange={(e) => setEffects({...effects, proximity: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Documentary Depth</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Suara berat ala Narator</p>
             </div>
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Air_Clarity</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Kejernihan_Vokal</span>
                 <span className="text-neon font-mono text-xs">+{effects.clarity}dB</span>
               </div>
               <input 
@@ -603,12 +603,12 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Fasih Definition</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Suara lebih fasih & jelas</p>
             </div>
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Tube_Warmth</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Kesan_Premium</span>
                 <span className="text-neon font-mono text-xs">{(effects.warmth * 100).toFixed(0)}%</span>
               </div>
               <input 
@@ -617,7 +617,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 onChange={(e) => setEffects({...effects, warmth: parseFloat(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Billion_Dollar_Sat</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Warna suara studio mahal</p>
             </div>
 
             <div className="space-y-6">
