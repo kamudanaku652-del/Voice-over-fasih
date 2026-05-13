@@ -439,22 +439,22 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   return (
     <div className="w-full space-y-8">
       {/* Time & Metrics Display */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-6">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.4em] font-black text-zinc-600 mb-2">Monitor_Playback_Time</p>
-          <h2 className="text-7xl md:text-9xl font-black text-neon tracking-tighter font-mono leading-none">
-            {formatTime(currentTime).split('.')[0]}<span className="opacity-20 text-4xl md:text-6xl">.{formatTime(currentTime).split('.')[1]}</span>
+          <p className="text-[9px] md:text-[11px] uppercase tracking-[0.4em] font-black text-zinc-600 mb-1 md:mb-2">Monitor_Playback_Time</p>
+          <h2 className="text-6xl md:text-9xl font-black text-neon tracking-tighter font-mono leading-none">
+            {formatTime(currentTime).split('.')[0]}<span className="opacity-20 text-3xl md:text-6xl">.{formatTime(currentTime).split('.')[1]}</span>
           </h2>
         </div>
         
-        <div className="flex flex-col items-end gap-3 translate-y-[-10px]">
-           <p className="text-[11px] uppercase tracking-[0.4em] font-black text-zinc-600">Dynamic_Input_Level</p>
-           <div className="flex items-center gap-1 h-12 w-56 bg-black border border-studio-border px-4 rounded-xl">
+        <div className="flex flex-col items-start md:items-end gap-2 md:gap-3 md:translate-y-[-10px]">
+           <p className="text-[9px] md:text-[11px] uppercase tracking-[0.4em] font-black text-zinc-600">Dynamic_Input_Level</p>
+           <div className="flex items-center gap-1 h-10 md:h-12 w-full max-w-[200px] md:w-56 bg-black border border-studio-border px-3 md:px-4 rounded-xl">
              {[...Array(20)].map((_, i) => (
                 <div 
                   key={i} 
                   className={cn(
-                    "flex-1 h-6 rounded-sm transition-all duration-75",
+                    "flex-1 h-5 md:h-6 rounded-sm transition-all duration-75",
                     i / 20 < (vuLevel / 120) ? "bg-neon shadow-[0_0_10px_#C9FF00]" : "bg-zinc-900"
                   )}
                 />
@@ -464,7 +464,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       </div>
 
       {/* Waveform Container */}
-      <div className="relative bg-[#000] rounded-3xl p-10 border border-studio-border overflow-hidden waveform-shadow ring-1 ring-white/5">
+      <div className="relative bg-[#000] rounded-2xl md:rounded-3xl p-4 md:p-10 border border-studio-border overflow-hidden waveform-shadow ring-1 ring-white/5">
         <div ref={waveformRef} className="w-full" />
         
         {/* Frequency Visualizer Overlay */}
@@ -472,11 +472,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           ref={canvasRef} 
           width={800} 
           height={60} 
-          className="w-full mt-4 h-[60px] opacity-40 mix-blend-screen"
+          className="w-full mt-4 h-[40px] md:h-[60px] opacity-40 mix-blend-screen"
         />
 
         {/* Time Indicators */}
-        <div className="flex justify-between mt-8 border-t border-studio-border pt-4 font-mono text-[11px] text-zinc-600 tracking-[0.3em] font-black uppercase italic">
+        <div className="flex justify-between mt-4 md:mt-8 border-t border-studio-border pt-4 font-mono text-[9px] md:text-[11px] text-zinc-600 tracking-[0.2em] md:tracking-[0.3em] font-black uppercase italic">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(duration)}</span>
         </div>
@@ -509,11 +509,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
       {/* Mastering Rack (Conditional) */}
       {showEffects && (
-        <div className="bg-[#000] border border-neon/20 rounded-[40px] p-12 space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700">
+        <div className="bg-[#000] border border-neon/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700">
           {/* Preset Selector */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-4 md:gap-6">
             <div className="flex justify-between items-center">
-              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Mastering_Profiles</p>
+              <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em] md:tracking-[0.5em] text-zinc-600 italic">Mastering_Profiles</p>
               <button 
                 onClick={() => {
                   applyPreset('neutral');
@@ -524,36 +524,36 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 Reset_To_Default
               </button>
             </div>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-2 md:gap-4">
               {[
-                { id: 'neutral', name: 'Raw_Studio', icon: Activity },
-                { id: 'deep', name: 'Deep_Narrator', icon: Headphones },
-                { id: 'news', name: 'Crystal_News', icon: Radio },
-                { id: 'cinematic', name: 'Cinematic_Air', icon: Wand2 },
-                { id: 'expensive', name: 'Mic_Studio_Expensive', icon: Mic }
+                { id: 'neutral', name: 'Raw', icon: Activity },
+                { id: 'deep', name: 'Deep', icon: Headphones },
+                { id: 'news', name: 'News', icon: Radio },
+                { id: 'cinematic', name: 'Air', icon: Wand2 },
+                { id: 'expensive', name: 'Pro', icon: Mic }
               ].map((p) => (
                 <button
                   key={p.id}
                   onClick={() => applyPreset(p.id as any)}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-2xl border transition-all font-black text-xs uppercase italic tracking-widest min-w-[200px]",
+                    "flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-4 px-3 md:px-6 rounded-xl md:rounded-2xl border transition-all font-black text-[9px] md:text-xs uppercase italic tracking-widest min-w-[100px] md:min-w-[200px]",
                     activePreset === p.id 
                       ? "bg-neon border-neon text-black shadow-[0_0_30px_#C9FF00]" 
                       : "bg-[#111] border-studio-border text-zinc-500 hover:border-neon/50 hover:text-white"
                   )}
                 >
-                  <p.icon size={16} />
+                  <p.icon size={14} className="md:w-4 md:h-4" />
                   {p.name}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 border-t border-studio-border pt-12">
-            <div className="lg:col-span-1 space-y-6 bg-neon/5 p-6 rounded-3xl border border-neon/20 shadow-[0_0_40px_rgba(201,255,0,0.05)]">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-12 border-t border-studio-border pt-8 md:pt-12">
+            <div className="lg:col-span-1 space-y-4 md:space-y-6 bg-neon/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-neon/20 shadow-[0_0_40px_rgba(201,255,0,0.05)]">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Alan_Clean_Bass</span>
-                <span className="text-neon font-mono text-xs">{(effects.cleanPunch * 100).toFixed(0)}%</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Alan_Clean_Bass</span>
+                <span className="text-neon font-mono text-[10px] md:text-xs">{(effects.cleanPunch * 100).toFixed(0)}%</span>
               </div>
               <input 
                 type="range" min="0" max="1" step="0.01" 
@@ -639,22 +639,22 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
       {/* FX RACK (Space & Lo-Fi) */}
       {showFXRack && (
-        <div className="bg-[#000] border border-blue-500/20 rounded-[40px] p-12 space-y-12 shadow-[0_0_120px_rgba(59,130,246,0.1)] animate-in fade-in zoom-in-95 duration-700">
+        <div className="bg-[#000] border border-blue-500/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(59,130,246,0.1)] animate-in fade-in zoom-in-95 duration-700">
           <div className="flex justify-between items-center">
-             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Sound_Design_FX_Rack</p>
+             <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em] md:tracking-[0.5em] text-zinc-600 italic">Sound_Design_FX_Rack</p>
              <button 
                 onClick={() => setEffects(prev => ({...prev, reverb: 0, telephone: false, cleanPunch: 0}))}
-                className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 hover:underline"
+                className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 hover:underline"
               >
                 Clear_FX
               </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-             <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+             <div className="space-y-4 md:space-y-6">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Space_Engine (Reverb)</span>
-                  <span className="text-blue-400 font-mono text-xs">{(effects.reverb * 200).toFixed(0)}%</span>
+                  <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Space_Engine (Reverb)</span>
+                  <span className="text-blue-400 font-mono text-[10px] md:text-xs">{(effects.reverb * 200).toFixed(0)}%</span>
                 </div>
                 <input 
                   type="range" min="0" max="0.5" step="0.01" 
@@ -689,34 +689,34 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       )}
 
       {/* Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-8 bg-[#000] p-8 rounded-3xl border border-studio-border shadow-[0_30px_90px_rgba(0,0,0,0.9)] shadow-neon/5 relative z-10 transition-all hover:border-studio-border/50">
-        <div className="flex items-center gap-6">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-6 md:gap-8 bg-[#000] p-6 md:p-8 rounded-2xl md:rounded-3xl border border-studio-border shadow-[0_30px_90px_rgba(0,0,0,0.9)] shadow-neon/5 relative z-10 transition-all hover:border-studio-border/50">
+        <div className="flex items-center gap-4 md:gap-6 w-full sm:w-auto justify-center sm:justify-start">
           {!isRecording ? (
             <button
               onClick={startRecording}
-              className="group relative flex items-center gap-4 bg-neon hover:scale-105 active:scale-95 text-black px-10 py-5 rounded-full transition-all duration-300 font-black italic uppercase tracking-tighter shadow-[0_0_30px_rgba(201,255,0,0.3)]"
+              className="group relative flex items-center gap-3 md:gap-4 bg-neon hover:scale-105 active:scale-95 text-black px-6 md:px-10 py-3 md:py-5 rounded-full transition-all duration-300 font-black italic uppercase tracking-tighter shadow-[0_0_30px_rgba(201,255,0,0.3)]"
             >
-              <Mic size={24} className="relative z-10" />
-              <span className="relative z-10 text-lg">Start_Rec</span>
+              <Mic size={20} className="md:w-6 md:h-6 relative z-10" />
+              <span className="relative z-10 text-sm md:text-lg whitespace-nowrap">Start_Rec</span>
             </button>
           ) : (
             <button
               onClick={stopRecording}
-              className="flex items-center gap-4 bg-white text-black px-10 py-5 rounded-full hover:scale-105 active:scale-95 transition-all font-black italic uppercase tracking-tighter"
+              className="flex items-center gap-3 md:gap-4 bg-white text-black px-6 md:px-10 py-3 md:py-5 rounded-full hover:scale-105 active:scale-95 transition-all font-black italic uppercase tracking-tighter"
             >
-              <Square size={20} fill="black" />
-              <span className="text-lg">Stop_Rec</span>
+              <Square size={16} md:size={20} fill="black" />
+              <span className="text-sm md:text-lg whitespace-nowrap">Stop_Rec</span>
             </button>
           )}
 
-          <div className="h-12 w-px bg-studio-border mx-2" />
+          <div className="h-10 md:h-12 w-px bg-studio-border mx-1 md:mx-2" />
 
           <button
             disabled={!audioUrl}
             onClick={togglePlayback}
-            className="w-16 h-16 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] hover:border-neon/50 disabled:opacity-20 transition-all border border-studio-border text-white shadow-2xl"
+            className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] hover:border-neon/50 disabled:opacity-20 transition-all border border-studio-border text-white shadow-2xl"
           >
-            {isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" className="ml-1" />}
+            {isPlaying ? <Pause size={24} md:size={32} fill="white" /> : <Play size={24} md:size={32} fill="white" className="ml-1" />}
           </button>
           
           <input 
@@ -728,15 +728,15 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           />
           <button
             onClick={triggerUpload}
-            className="w-14 h-14 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] border border-studio-border text-zinc-500 hover:text-white transition-all shadow-xl hover:scale-110"
+            className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] border border-studio-border text-zinc-500 hover:text-white transition-all shadow-xl hover:scale-110"
             title="Import Audio File"
           >
-            <Upload size={24} />
+            <Upload size={20} md:size={24} />
           </button>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex gap-3">
+        <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto justify-center sm:justify-end">
+          <div className="flex gap-2 md:gap-3">
             <button
               title="Studio Mastering Rack"
               onClick={() => {
@@ -744,11 +744,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 setShowFXRack(false);
               }}
               className={cn(
-                "p-4 rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
+                "p-3 md:p-4 rounded-xl md:rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
                 showEffects ? "bg-neon text-black border-neon" : "bg-[#111] text-zinc-500 border-studio-border hover:text-neon"
               )}
             >
-              <Wand2 size={24} />
+              <Wand2 size={20} md:size={24} />
             </button>
             <button
               title="FX Sound Design Rack"
@@ -757,32 +757,32 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 setShowEffects(false);
               }}
               className={cn(
-                "p-4 rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
+                "p-3 md:p-4 rounded-xl md:rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
                 showFXRack ? "bg-blue-500 text-black border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)]" : "bg-[#111] text-zinc-500 border-studio-border hover:text-blue-500"
               )}
             >
-              <Activity size={24} />
+              <Activity size={20} md:size={24} />
             </button>
           </div>
           
-          <div className="h-12 w-px bg-studio-border mx-2" />
+          <div className="h-10 md:h-12 w-px bg-studio-border mx-1 md:mx-2" />
           
           <button
             disabled={!audioUrl}
             onClick={handleDownload}
-            className="px-10 py-5 rounded-2xl bg-[#111] hover:bg-neon hover:text-black font-black italic uppercase tracking-tighter disabled:opacity-20 transition-all border border-studio-border text-zinc-500 shadow-xl group"
+            className="px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl bg-[#111] hover:bg-neon hover:text-black font-black italic uppercase tracking-tighter disabled:opacity-20 transition-all border border-studio-border text-zinc-500 shadow-xl group"
           >
-            <Download size={20} className="inline mr-3 mb-1 group-hover:-translate-y-1 transition-transform" />
-            Export_Final
+            <Download size={18} md:size={20} className="inline mr-2 md:mr-3 mb-1 group-hover:-translate-y-1 transition-transform" />
+            <span className="text-xs md:text-base">Export</span>
           </button>
           
           <button
             title="Wipe Studio Buffer"
             disabled={!audioUrl}
             onClick={clearAudio}
-            className="p-4 rounded-2xl bg-[#111] hover:bg-red-900/20 disabled:opacity-10 transition-all border border-studio-border text-zinc-500 hover:text-red-500 hover:scale-110 active:scale-95"
+            className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#111] hover:bg-red-900/20 disabled:opacity-10 transition-all border border-studio-border text-zinc-500 hover:text-red-500 hover:scale-110 active:scale-95"
           >
-            <Trash2 size={24} />
+            <Trash2 size={20} md:size={24} />
           </button>
         </div>
       </div>

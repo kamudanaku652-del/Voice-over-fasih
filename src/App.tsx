@@ -10,16 +10,16 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col studio-grid font-sans selection:bg-neon selection:text-black">
       {/* Top Navigation */}
-      <header className="h-24 border-b border-studio-border bg-black/90 backdrop-blur-xl flex items-center justify-between px-10 sticky top-0 z-50">
-        <div className="flex items-center gap-6">
-          <div className="w-12 h-12 bg-neon rounded-full flex items-center justify-center text-black font-black italic shadow-[0_0_30px_rgba(201,255,0,0.2)]">
+      <header className="h-20 md:h-24 border-b border-studio-border bg-black/90 backdrop-blur-xl flex items-center justify-between px-4 md:px-10 sticky top-0 z-50">
+        <div className="flex items-center gap-3 md:gap-6">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-neon rounded-full flex items-center justify-center text-black font-black italic shadow-[0_0_30px_rgba(201,255,0,0.2)] text-sm md:text-base">
             VO
           </div>
           <div>
-            <h1 className="text-4xl font-black uppercase tracking-tighter italic text-white flex items-center gap-2">
-              Alan<span className="text-neon">_Voice_Edit</span>
+            <h1 className="text-xl md:text-4xl font-black uppercase tracking-tighter italic text-white flex items-center gap-2">
+              Alan<span className="text-neon hidden xs:inline">_Voice_Edit</span><span className="text-neon xs:hidden">_VO</span>
             </h1>
-            <p className="text-[10px] text-zinc-500 font-black tracking-[0.4em] uppercase">Enterprise_Engine_v1.0</p>
+            <p className="text-[8px] md:text-[10px] text-zinc-500 font-black tracking-[0.2em] md:tracking-[0.4em] uppercase">Enterprise_Engine_v1.0</p>
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-8 md:p-12 max-w-[1600px] mx-auto w-full overflow-hidden">
+      <main className="flex-1 p-4 md:p-12 max-w-[1600px] mx-auto w-full overflow-hidden">
         <AnimatePresence mode="wait">
           {activeTab === 'studio' ? (
             <motion.div 
@@ -89,11 +89,11 @@ export default function App() {
                          <div className="w-2 h-2 bg-neon rounded-full animate-pulse" />
                          <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">ID_Documentary_Mode_Active</p>
                       </div>
-                      <h2 className="text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
+                      <h2 className="text-4xl md:text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
                         Master<span className="text-neon">_Rack</span>
                       </h2>
                     </div>
-                    <div className="flex items-center gap-8 text-[11px] font-black text-zinc-500 uppercase tracking-widest italic border border-studio-border px-6 py-3 rounded-2xl bg-black/50">
+                    <div className="hidden sm:flex items-center gap-8 text-[11px] font-black text-zinc-500 uppercase tracking-widest italic border border-studio-border px-6 py-3 rounded-2xl bg-black/50">
                       <span className="flex items-center gap-2 decoration-neon hover:underline cursor-none transition-all"><Signal size={14} className="text-neon" /> 48khz_Lossless</span>
                       <div className="w-px h-4 bg-zinc-800" />
                       <span className="flex items-center gap-2 transition-all"><Cpu size={14} className="text-neon" /> Clear_VO_v4.2</span>
@@ -102,8 +102,8 @@ export default function App() {
 
                   <AudioEditor />
                   
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="p-8 rounded-3xl bg-[#000] border border-studio-border group hover:border-neon/50 transition-all cursor-pointer shadow-xl hover:shadow-neon/5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                    <div className="p-6 md:p-8 rounded-3xl bg-[#000] border border-studio-border group hover:border-neon/50 transition-all cursor-pointer shadow-xl hover:shadow-neon/5">
                       <div className="flex items-center justify-between mb-6">
                         <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] border border-zinc-900 px-3 py-1 rounded-full">Algo_Isolate_v4</span>
                         <ChevronRight size={18} className="text-zinc-600 group-hover:translate-x-1 transition-transform group-hover:text-neon" />
@@ -185,23 +185,24 @@ export default function App() {
       </main>
 
       {/* Status Footer */}
-      <footer className="h-14 border-t border-studio-border bg-black flex items-center justify-between px-10">
-        <div className="flex gap-10">
-          <div className="flex items-center gap-3">
+      <footer className="h-14 border-t border-studio-border bg-black flex items-center justify-between px-4 md:px-10">
+        <div className="flex gap-4 md:gap-10">
+          <div className="flex items-center gap-2 md:gap-3">
             <span className="w-2 h-2 bg-neon rounded-full recording-indicator-neon" />
-            <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest italic">Live_Signal: Active</span>
+            <span className="text-[9px] md:text-[11px] font-black text-zinc-500 uppercase tracking-widest italic">Live: Active</span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="hidden xs:flex items-center gap-3">
             <Headphones size={14} className="text-zinc-600" />
-            <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest italic">Input_Monitor: enabled</span>
+            <span className="text-[11px] font-black text-zinc-500 uppercase tracking-widest italic md:block hidden">Input_Monitor: enabled</span>
+            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest italic md:hidden block">Monitor</span>
           </div>
         </div>
-        <div className="flex items-center gap-8">
-          <span className="text-[11px] font-black text-zinc-600 uppercase tracking-widest italic">Latency: 4.2ms</span>
-          <div className="h-5 w-px bg-studio-border" />
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4 md:gap-8">
+          <span className="text-[9px] md:text-[11px] font-black text-zinc-600 uppercase tracking-widest italic">4.2ms</span>
+          <div className="hidden sm:block h-5 w-px bg-studio-border" />
+          <div className="hidden sm:flex items-center gap-3">
             <span className="text-[9px] font-black text-zinc-700 uppercase tracking-tighter">Volume</span>
-            <div className="w-32 h-[2px] bg-studio-border"><div className="bg-neon h-full w-2/3 shadow-[0_0_10px_#C9FF00]"></div></div>
+            <div className="w-24 md:w-32 h-[2px] bg-studio-border"><div className="bg-neon h-full w-2/3 shadow-[0_0_10px_#C9FF00]"></div></div>
           </div>
         </div>
       </footer>
