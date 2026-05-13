@@ -149,15 +149,19 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   };
 
   const [showEffects, setShowEffects] = useState(false);
-  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic'>('neutral');
+  const [showFXRack, setShowFXRack] = useState(false);
+  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive'>('neutral');
   const [effects, setEffects] = useState({
     gate: -45,
-    clarity: 8,
-    compression: -20,
-    deEsser: -12,
-    proximity: 6,
-    warmth: 0.5,
-    limit: -1
+    clarity: 4,
+    compression: -12,
+    deEsser: -10,
+    proximity: 2,
+    warmth: 0.05,
+    limit: -1,
+    reverb: 0,
+    telephone: false,
+    cleanPunch: 0
   });
 
   // Audio Context for Processing
@@ -168,40 +172,88 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const proximityEq = useRef<BiquadFilterNode | null>(null);
   const deBoxEq = useRef<BiquadFilterNode | null>(null);
   const deEsser = useRef<BiquadFilterNode | null>(null);
+  const telephoneFilter = useRef<BiquadFilterNode | null>(null);
+  const reverbNode = useRef<ConvolverNode | null>(null);
+  const reverbGain = useRef<GainNode | null>(null);
   const saturator = useRef<WaveShaperNode | null>(null);
+  const analyser = useRef<AnalyserNode | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const applyPreset = (type: 'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive') => {
-    setActivePreset(type as any);
+    setActivePreset(type);
     switch(type) {
       case 'deep':
-        setEffects({ gate: -40, clarity: 3, compression: -16, deEsser: -15, proximity: 6, warmth: 0.1, limit: -1 });
+        setEffects(prev => ({ ...prev, gate: -40, clarity: 3, compression: -16, deEsser: -15, proximity: 6, warmth: 0.1, limit: -1, cleanPunch: 0.2 }));
         break;
       case 'news':
-        setEffects({ gate: -35, clarity: 8, compression: -22, deEsser: -10, proximity: 1, warmth: 0.05, limit: -0.5 });
+        setEffects(prev => ({ ...prev, gate: -35, clarity: 8, compression: -22, deEsser: -10, proximity: 1, warmth: 0.05, limit: -0.5, cleanPunch: 0.1 }));
         break;
       case 'cinematic':
-        setEffects({ gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1 });
+        setEffects(prev => ({ ...prev, gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1, cleanPunch: 0.3 }));
         break;
       case 'expensive':
-        // Refined Neumann Luxury: Not too extreme, just polished.
-        setEffects({ gate: -55, clarity: 8, compression: -18, deEsser: -20, proximity: 5, warmth: 0.3, limit: -1 });
+        setEffects(prev => ({ ...prev, gate: -55, clarity: 8, compression: -18, deEsser: -20, proximity: 5, warmth: 0.3, limit: -1, cleanPunch: 0.4 }));
         break;
       default:
-        setEffects({ gate: -45, clarity: 4, compression: -12, deEsser: -10, proximity: 2, warmth: 0.05, limit: -1 });
+        setEffects(prev => ({ ...prev, gate: -45, clarity: 4, compression: -12, deEsser: -10, proximity: 2, warmth: 0.05, limit: -1, cleanPunch: 0 }));
     }
   };
 
-  // Improved saturation curve - smoother and more "analog" like a expensive mic preamp
+  // Helper for saturation curve
   const makeDistortionCurve = (amount: number) => {
     const n_samples = 44100;
     const curve = new Float32Array(n_samples);
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
-      // Using hyperbolic tangent for soft-clipping saturation
       const gain = 1 + (amount * 1.5); 
       curve[i] = Math.tanh(x * gain) / Math.tanh(gain);
     }
     return curve;
+  };
+
+  // Create Reverb Impulse (Simple White Noise Decay)
+  const createImpulseResponse = (ctx: AudioContext, duration: number, decay: number) => {
+    const length = ctx.sampleRate * duration;
+    const impulse = ctx.createBuffer(2, length, ctx.sampleRate);
+    for (let i = 0; i < 2; i++) {
+        const channel = impulse.getChannelData(i);
+        for (let j = 0; j < length; j++) {
+            channel[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / length, decay);
+        }
+    }
+    return impulse;
+  };
+
+  // Visualizer Animation Loop
+  const drawVisualizer = () => {
+    if (!analyser.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const bufferLength = analyser.current.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    const draw = () => {
+      requestAnimationFrame(draw);
+      if (!analyser.current) return;
+      analyser.current.getByteFrequencyData(dataArray);
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const barWidth = (canvas.width / (bufferLength / 2)) * 2;
+      let barHeight;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength / 2; i++) {
+        barHeight = (dataArray[i] / 255) * canvas.height;
+        ctx.fillStyle = `rgba(201, 255, 0, ${dataArray[i] / 255 + 0.1})`;
+        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        x += barWidth + 1;
+      }
+    };
+    draw();
   };
 
   // Initialize Audio Processing Chain
@@ -214,6 +266,9 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           audioCtx.current = new (window.AudioContext || (window as any).webkitAudioContext)();
           const source = audioCtx.current.createMediaElementSource(mediaElement);
           
+          analyser.current = audioCtx.current.createAnalyser();
+          analyser.current.fftSize = 256;
+
           proximityEq.current = audioCtx.current.createBiquadFilter();
           proximityEq.current.type = 'lowshelf';
           proximityEq.current.frequency.value = 150;
@@ -229,12 +284,22 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           deEsser.current.frequency.value = 6500;
           deEsser.current.Q.value = 4;
 
+          telephoneFilter.current = audioCtx.current.createBiquadFilter();
+          telephoneFilter.current.type = 'bandpass';
+          telephoneFilter.current.frequency.value = 1500;
+          telephoneFilter.current.Q.value = 1.0;
+
           clarityEq.current = audioCtx.current.createBiquadFilter();
           clarityEq.current.type = 'highshelf';
           clarityEq.current.frequency.value = 4800;
 
           saturator.current = audioCtx.current.createWaveShaper();
           saturator.current.oversample = '4x';
+
+          reverbNode.current = audioCtx.current.createConvolver();
+          reverbNode.current.buffer = createImpulseResponse(audioCtx.current, 1.5, 2);
+          reverbGain.current = audioCtx.current.createGain();
+          reverbGain.current.gain.value = 0;
 
           compressor.current = audioCtx.current.createDynamicsCompressor();
           compressor.current.knee.value = 40;
@@ -247,19 +312,34 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           limiter.current.knee.value = 0;
           limiter.current.ratio.value = 20;
           
-          // Chain: Source -> deBox -> DeEsser -> Saturator -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
           const gainNode = audioCtx.current.createGain();
           gainNode.gain.value = 1.0;
 
-          source.connect(deBoxEq.current);
+          const mainOutput = audioCtx.current.createGain();
+
+          // Chain: Source -> analyser -> deBox -> DeEsser -> mainOutput
+          source.connect(analyser.current);
+          analyser.current.connect(deBoxEq.current);
           deBoxEq.current.connect(deEsser.current);
-          deEsser.current.connect(saturator.current);
+          
+          // Parallel Reverb
+          deEsser.current.connect(reverbNode.current);
+          reverbNode.current.connect(reverbGain.current);
+          reverbGain.current.connect(mainOutput);
+
+          deEsser.current.connect(mainOutput);
+          
+          mainOutput.connect(saturator.current);
+          
+          // FX Routing
           saturator.current.connect(proximityEq.current);
           proximityEq.current.connect(clarityEq.current);
           clarityEq.current.connect(compressor.current);
           compressor.current.connect(gainNode);
           gainNode.connect(limiter.current);
           limiter.current.connect(audioCtx.current.destination);
+
+          drawVisualizer();
         }
       });
     }
@@ -267,23 +347,48 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
   // Update Effects in Real-time
   useEffect(() => {
-    if (compressor.current) {
-      compressor.current.threshold.setValueAtTime(effects.compression, audioCtx.current!.currentTime);
+    if (compressor.current && audioCtx.current) {
+      compressor.current.threshold.setValueAtTime(effects.compression, audioCtx.current.currentTime);
     }
-    if (limiter.current) {
-      limiter.current.threshold.setValueAtTime(effects.limit, audioCtx.current!.currentTime);
+    if (limiter.current && audioCtx.current) {
+      limiter.current.threshold.setValueAtTime(effects.limit, audioCtx.current.currentTime);
     }
-    if (clarityEq.current) {
-      clarityEq.current.gain.setValueAtTime(effects.clarity, audioCtx.current!.currentTime);
+    if (clarityEq.current && audioCtx.current) {
+      clarityEq.current.gain.setValueAtTime(effects.clarity, audioCtx.current.currentTime);
     }
-    if (proximityEq.current) {
-      proximityEq.current.gain.setValueAtTime(effects.proximity, audioCtx.current!.currentTime);
+    if (proximityEq.current && audioCtx.current) {
+      // Proximity = base proximity + cleanPunch contribution
+      const finalProximity = effects.proximity + (effects.cleanPunch * 15);
+      proximityEq.current.gain.setValueAtTime(finalProximity, audioCtx.current.currentTime);
     }
-    if (deEsser.current) {
-      deEsser.current.gain.setValueAtTime(effects.deEsser, audioCtx.current!.currentTime);
+    if (deBoxEq.current && audioCtx.current) {
+      // Noise reduction part: cut more low-mids (boxy sounds) as cleanPunch increases
+      const boxCut = -3 - (effects.cleanPunch * 10);
+      deBoxEq.current.gain.setValueAtTime(boxCut, audioCtx.current.currentTime);
+    }
+    if (deEsser.current && audioCtx.current) {
+      deEsser.current.gain.setValueAtTime(effects.deEsser, audioCtx.current.currentTime);
     }
     if (saturator.current) {
       saturator.current.curve = makeDistortionCurve(effects.warmth);
+    }
+    if (reverbGain.current && audioCtx.current) {
+      reverbGain.current.gain.setValueAtTime(effects.reverb, audioCtx.current.currentTime);
+    }
+    if (telephoneFilter.current && audioCtx.current && saturator.current && proximityEq.current) {
+      try {
+        if (effects.telephone) {
+          saturator.current.disconnect(proximityEq.current);
+          saturator.current.connect(telephoneFilter.current);
+          telephoneFilter.current.connect(proximityEq.current);
+        } else {
+          try { saturator.current.disconnect(telephoneFilter.current); } catch(e) {}
+          try { telephoneFilter.current.disconnect(proximityEq.current); } catch(e) {}
+          saturator.current.connect(proximityEq.current);
+        }
+      } catch(e) {
+        // Handle cases where nodes might already be connected/disconnected
+      }
     }
   }, [effects]);
 
@@ -362,6 +467,14 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       <div className="relative bg-[#000] rounded-3xl p-10 border border-studio-border overflow-hidden waveform-shadow ring-1 ring-white/5">
         <div ref={waveformRef} className="w-full" />
         
+        {/* Frequency Visualizer Overlay */}
+        <canvas 
+          ref={canvasRef} 
+          width={800} 
+          height={60} 
+          className="w-full mt-4 h-[60px] opacity-40 mix-blend-screen"
+        />
+
         {/* Time Indicators */}
         <div className="flex justify-between mt-8 border-t border-studio-border pt-4 font-mono text-[11px] text-zinc-600 tracking-[0.3em] font-black uppercase italic">
           <span>{formatTime(currentTime)}</span>
@@ -402,7 +515,10 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             <div className="flex justify-between items-center">
               <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Mastering_Profiles</p>
               <button 
-                onClick={() => applyPreset('neutral')}
+                onClick={() => {
+                  applyPreset('neutral');
+                  setEffects(prev => ({ ...prev, cleanPunch: 0 }));
+                }}
                 className="text-[10px] font-black uppercase tracking-[0.2em] text-neon hover:underline"
               >
                 Reset_To_Default
@@ -434,6 +550,20 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 border-t border-studio-border pt-12">
+            <div className="lg:col-span-1 space-y-6 bg-neon/5 p-6 rounded-3xl border border-neon/20 shadow-[0_0_40px_rgba(201,255,0,0.05)]">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Alan_Clean_Bass</span>
+                <span className="text-neon font-mono text-xs">{(effects.cleanPunch * 100).toFixed(0)}%</span>
+              </div>
+              <input 
+                type="range" min="0" max="1" step="0.01" 
+                value={effects.cleanPunch} 
+                onChange={(e) => setEffects({...effects, cleanPunch: parseFloat(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest italic leading-relaxed">Noise Reduction + Big Bass Engine</p>
+            </div>
+
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">De-Esser</span>
@@ -507,6 +637,57 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
         </div>
       )}
 
+      {/* FX RACK (Space & Lo-Fi) */}
+      {showFXRack && (
+        <div className="bg-[#000] border border-blue-500/20 rounded-[40px] p-12 space-y-12 shadow-[0_0_120px_rgba(59,130,246,0.1)] animate-in fade-in zoom-in-95 duration-700">
+          <div className="flex justify-between items-center">
+             <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Sound_Design_FX_Rack</p>
+             <button 
+                onClick={() => setEffects(prev => ({...prev, reverb: 0, telephone: false, cleanPunch: 0}))}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 hover:underline"
+              >
+                Clear_FX
+              </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+             <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Space_Engine (Reverb)</span>
+                  <span className="text-blue-400 font-mono text-xs">{(effects.reverb * 200).toFixed(0)}%</span>
+                </div>
+                <input 
+                  type="range" min="0" max="0.5" step="0.01" 
+                  value={effects.reverb} 
+                  onChange={(e) => setEffects({...effects, reverb: parseFloat(e.target.value)})}
+                  className="w-full accent-blue-500 bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+                />
+                <div className="flex gap-2">
+                   <button onClick={() => setEffects({...effects, reverb: 0.05})} className="text-[9px] border border-zinc-800 px-2 py-1 rounded hover:bg-zinc-800 text-zinc-500">Tight_Room</button>
+                   <button onClick={() => setEffects({...effects, reverb: 0.2})} className="text-[9px] border border-zinc-800 px-2 py-1 rounded hover:bg-zinc-800 text-zinc-500">Live_Lexicon</button>
+                   <button onClick={() => setEffects({...effects, reverb: 0.4})} className="text-[9px] border border-zinc-800 px-2 py-1 rounded hover:bg-zinc-800 text-zinc-500">Cathedral_Hall</button>
+                </div>
+             </div>
+
+             <div className="space-y-6">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic block mb-2">Vintage_Transmission</span>
+                <div className="flex gap-4">
+                   <button 
+                     onClick={() => setEffects({...effects, telephone: !effects.telephone})}
+                     className={cn(
+                       "flex-1 py-4 px-6 rounded-2xl border transition-all font-black text-xs uppercase italic tracking-widest",
+                       effects.telephone ? "bg-blue-500 border-blue-500 text-black shadow-[0_0_20px_#3B82F6]" : "bg-[#111] border-zinc-800 text-zinc-500 hover:border-blue-500/50"
+                     )}
+                   >
+                     Telephone_Mode (Lo-Fi)
+                   </button>
+                </div>
+                <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest italic">Simulates bandwidth-limited analog hardware</p>
+             </div>
+          </div>
+        </div>
+      )}
+
       {/* Controls Bar */}
       <div className="flex flex-wrap items-center justify-between gap-8 bg-[#000] p-8 rounded-3xl border border-studio-border shadow-[0_30px_90px_rgba(0,0,0,0.9)] shadow-neon/5 relative z-10 transition-all hover:border-studio-border/50">
         <div className="flex items-center gap-6">
@@ -558,13 +739,29 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           <div className="flex gap-3">
             <button
               title="Studio Mastering Rack"
-              onClick={() => setShowEffects(!showEffects)}
+              onClick={() => {
+                setShowEffects(!showEffects);
+                setShowFXRack(false);
+              }}
               className={cn(
                 "p-4 rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
                 showEffects ? "bg-neon text-black border-neon" : "bg-[#111] text-zinc-500 border-studio-border hover:text-neon"
               )}
             >
               <Wand2 size={24} />
+            </button>
+            <button
+              title="FX Sound Design Rack"
+              onClick={() => {
+                setShowFXRack(!showFXRack);
+                setShowEffects(false);
+              }}
+              className={cn(
+                "p-4 rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
+                showFXRack ? "bg-blue-500 text-black border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)]" : "bg-[#111] text-zinc-500 border-studio-border hover:text-blue-500"
+              )}
+            >
+              <Activity size={24} />
             </button>
           </div>
           

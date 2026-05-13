@@ -17,7 +17,7 @@ export default function App() {
           </div>
           <div>
             <h1 className="text-4xl font-black uppercase tracking-tighter italic text-white flex items-center gap-2">
-              Studio<span className="text-neon">_Pro</span>
+              Alan<span className="text-neon">_Voice_Edit</span>
             </h1>
             <p className="text-[10px] text-zinc-500 font-black tracking-[0.4em] uppercase">Enterprise_Engine_v1.0</p>
           </div>
