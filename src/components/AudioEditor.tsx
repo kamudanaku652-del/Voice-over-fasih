@@ -166,6 +166,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const limiter = useRef<DynamicsCompressorNode | null>(null);
   const clarityEq = useRef<BiquadFilterNode | null>(null);
   const proximityEq = useRef<BiquadFilterNode | null>(null);
+  const deBoxEq = useRef<BiquadFilterNode | null>(null);
   const deEsser = useRef<BiquadFilterNode | null>(null);
   const saturator = useRef<WaveShaperNode | null>(null);
 
@@ -173,31 +174,32 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
     setActivePreset(type as any);
     switch(type) {
       case 'deep':
-        setEffects({ gate: -40, clarity: 4, compression: -18, deEsser: -12, proximity: 8, warmth: 0.4, limit: -1 });
+        setEffects({ gate: -40, clarity: 3, compression: -16, deEsser: -15, proximity: 6, warmth: 0.1, limit: -1 });
         break;
       case 'news':
-        setEffects({ gate: -35, clarity: 12, compression: -24, deEsser: -8, proximity: 2, warmth: 0.2, limit: -0.5 });
+        setEffects({ gate: -35, clarity: 8, compression: -22, deEsser: -10, proximity: 1, warmth: 0.05, limit: -0.5 });
         break;
       case 'cinematic':
-        setEffects({ gate: -50, clarity: 14, compression: -20, deEsser: -15, proximity: 5, warmth: 0.7, limit: -1 });
+        setEffects({ gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1 });
         break;
       case 'expensive':
-        setEffects({ gate: -55, clarity: 18, compression: -22, deEsser: -20, proximity: 9, warmth: 1.0, limit: -1 });
+        // Refined Neumann Luxury: Not too extreme, just polished.
+        setEffects({ gate: -55, clarity: 8, compression: -18, deEsser: -20, proximity: 5, warmth: 0.3, limit: -1 });
         break;
       default:
-        setEffects({ gate: -45, clarity: 6, compression: -22, deEsser: -10, proximity: 4, warmth: 0.5, limit: -1 });
+        setEffects({ gate: -45, clarity: 4, compression: -12, deEsser: -10, proximity: 2, warmth: 0.05, limit: -1 });
     }
   };
 
-  // Helper for saturation curve
+  // Improved saturation curve - smoother and more "analog" like a expensive mic preamp
   const makeDistortionCurve = (amount: number) => {
-    const k = amount * 100;
     const n_samples = 44100;
     const curve = new Float32Array(n_samples);
-    const deg = Math.PI / 180;
     for (let i = 0; i < n_samples; ++i) {
       const x = (i * 2) / n_samples - 1;
-      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+      // Using hyperbolic tangent for soft-clipping saturation
+      const gain = 1 + (amount * 1.5); 
+      curve[i] = Math.tanh(x * gain) / Math.tanh(gain);
     }
     return curve;
   };
@@ -216,35 +218,47 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           proximityEq.current.type = 'lowshelf';
           proximityEq.current.frequency.value = 150;
 
+          deBoxEq.current = audioCtx.current.createBiquadFilter();
+          deBoxEq.current.type = 'peaking';
+          deBoxEq.current.frequency.value = 400; // Common 'boxy' frequency for phone mics
+          deBoxEq.current.Q.value = 1;
+          deBoxEq.current.gain.value = -3; // 3dB cut to clean up the sound
+
           deEsser.current = audioCtx.current.createBiquadFilter();
           deEsser.current.type = 'peaking';
           deEsser.current.frequency.value = 6500;
-          deEsser.current.Q.value = 3;
+          deEsser.current.Q.value = 4;
 
           clarityEq.current = audioCtx.current.createBiquadFilter();
           clarityEq.current.type = 'highshelf';
-          clarityEq.current.frequency.value = 5000;
+          clarityEq.current.frequency.value = 4800;
 
           saturator.current = audioCtx.current.createWaveShaper();
           saturator.current.oversample = '4x';
 
           compressor.current = audioCtx.current.createDynamicsCompressor();
-          compressor.current.threshold.value = -24;
-          compressor.current.knee.value = 30;
-          compressor.current.ratio.value = 12;
+          compressor.current.knee.value = 40;
+          compressor.current.ratio.value = 4; 
+          compressor.current.attack.value = 0.01;
+          compressor.current.release.value = 0.2;
 
           limiter.current = audioCtx.current.createDynamicsCompressor();
           limiter.current.threshold.value = -1;
           limiter.current.knee.value = 0;
           limiter.current.ratio.value = 20;
           
-          // Chain: Source -> DeEsser -> Saturator -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
-          source.connect(deEsser.current);
+          // Chain: Source -> deBox -> DeEsser -> Saturator -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
+          const gainNode = audioCtx.current.createGain();
+          gainNode.gain.value = 1.0;
+
+          source.connect(deBoxEq.current);
+          deBoxEq.current.connect(deEsser.current);
           deEsser.current.connect(saturator.current);
           saturator.current.connect(proximityEq.current);
           proximityEq.current.connect(clarityEq.current);
           clarityEq.current.connect(compressor.current);
-          compressor.current.connect(limiter.current);
+          compressor.current.connect(gainNode);
+          gainNode.connect(limiter.current);
           limiter.current.connect(audioCtx.current.destination);
         }
       });
@@ -385,14 +399,22 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
         <div className="bg-[#000] border border-neon/20 rounded-[40px] p-12 space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700">
           {/* Preset Selector */}
           <div className="flex flex-col gap-6">
-            <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Documentary_Master_Profiles</p>
+            <div className="flex justify-between items-center">
+              <p className="text-[11px] font-black uppercase tracking-[0.5em] text-zinc-600 italic">Mastering_Profiles</p>
+              <button 
+                onClick={() => applyPreset('neutral')}
+                className="text-[10px] font-black uppercase tracking-[0.2em] text-neon hover:underline"
+              >
+                Reset_To_Default
+              </button>
+            </div>
             <div className="flex flex-wrap gap-4">
               {[
-                { id: 'neutral', name: 'Original_Studio', icon: Activity },
-                { id: 'deep', name: 'Deep_Narrative', icon: Headphones },
-                { id: 'news', name: 'World_Report', icon: Radio },
+                { id: 'neutral', name: 'Raw_Studio', icon: Activity },
+                { id: 'deep', name: 'Deep_Narrator', icon: Headphones },
+                { id: 'news', name: 'Crystal_News', icon: Radio },
                 { id: 'cinematic', name: 'Cinematic_Air', icon: Wand2 },
-                { id: 'expensive', name: 'Neumann_Luxury', icon: Mic }
+                { id: 'expensive', name: 'Mic_Studio_Expensive', icon: Mic }
               ].map((p) => (
                 <button
                   key={p.id}
