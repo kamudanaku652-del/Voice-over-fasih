@@ -1,0 +1,6 @@
+{
+  "name": "SuaraPro VO",
+  "description": "Aplikasi rekam dan edit pengisi suara (VO) profesional dengan visualisasi gelombang dan fitur cerdas untuk hasil rekaman yang fasih.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": []
+}
