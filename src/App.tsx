@@ -64,49 +64,66 @@ export default function App() {
               className="grid grid-cols-1 lg:grid-cols-12 gap-12 h-full"
             >
               {/* Left Column: Recording Console */}
-              <div className="lg:col-span-1 border-r border-[#222] hidden lg:flex flex-col items-center py-4 gap-10">
-                <div className="p-3 text-neon hover:scale-110 transition-transform cursor-pointer">
+              <div className="lg:col-span-1 border-r border-[#222] hidden lg:flex flex-col items-center py-6 gap-10">
+                <div className="p-3 text-neon hover:scale-110 transition-transform cursor-pointer bg-neon/10 rounded-xl shadow-[0_0_20px_rgba(201,255,0,0.1)]">
                   <Mic size={24} />
                 </div>
-                <div className="p-3 text-zinc-600 hover:text-white transition-colors cursor-pointer">
+                <div className="p-3 text-zinc-600 hover:text-white transition-colors cursor-pointer hover:bg-white/5 rounded-xl">
                   <Radio size={24} />
                 </div>
-                <div className="p-3 text-zinc-600 hover:text-white transition-colors cursor-pointer">
+                <div className="p-3 text-zinc-600 hover:text-white transition-colors cursor-pointer hover:bg-white/5 rounded-xl">
                   <Headphones size={24} />
+                </div>
+                <div className="mt-auto p-3 text-zinc-800">
+                   <div className="w-1 h-32 bg-zinc-900 rounded-full relative">
+                      <div className="absolute top-1/2 left-0 w-full h-1/2 bg-neon rounded-full" />
+                   </div>
                 </div>
               </div>
 
               <div className="lg:col-span-7 space-y-12 h-full flex flex-col">
-                <section className="space-y-8">
-                  <div className="flex items-end justify-between border-b border-studio-border pb-4">
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Production_Environment</p>
-                      <h2 className="text-5xl font-black tracking-tight uppercase italic text-white">Record_Desk</h2>
+                <section className="space-y-10">
+                  <div className="flex items-end justify-between border-b border-studio-border pb-6">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                         <div className="w-2 h-2 bg-neon rounded-full animate-pulse" />
+                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">Production_Environment_Console</p>
+                      </div>
+                      <h2 className="text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
+                        Record<span className="text-neon">_Desk</span>
+                      </h2>
                     </div>
-                    <div className="flex items-center gap-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest italic">
-                      <span className="flex items-center gap-2"><Signal size={14} className="text-neon" /> 48khz_Lossless</span>
-                      <span className="flex items-center gap-2"><Cpu size={14} className="text-neon" /> AI_Buffer_Active</span>
+                    <div className="flex items-center gap-8 text-[11px] font-black text-zinc-500 uppercase tracking-widest italic border border-studio-border px-6 py-3 rounded-2xl bg-black/50">
+                      <span className="flex items-center gap-2 decoration-neon hover:underline cursor-none transition-all"><Signal size={14} className="text-neon" /> 48khz_HD</span>
+                      <div className="w-px h-4 bg-zinc-800" />
+                      <span className="flex items-center gap-2 transition-all"><Cpu size={14} className="text-neon" /> AI_Engine_v2</span>
                     </div>
                   </div>
 
                   <AudioEditor />
                   
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="p-6 rounded-2xl bg-black border border-studio-border group hover:border-neon/50 transition-all cursor-pointer">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Effect_Engine_v4</span>
-                        <ChevronRight size={16} className="text-zinc-600 group-hover:translate-x-1 transition-transform group-hover:text-neon" />
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="p-8 rounded-3xl bg-[#000] border border-studio-border group hover:border-neon/50 transition-all cursor-pointer shadow-xl hover:shadow-neon/5">
+                      <div className="flex items-center justify-between mb-6">
+                        <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] border border-zinc-900 px-3 py-1 rounded-full">Algo_Isolate_v4</span>
+                        <ChevronRight size={18} className="text-zinc-600 group-hover:translate-x-1 transition-transform group-hover:text-neon" />
                       </div>
-                      <h3 className="text-lg font-black uppercase italic italic">Denoise_X3</h3>
-                      <p className="text-xs text-zinc-500 mt-2 font-medium">Professional grade noise isolation algorithm.</p>
+                      <h3 className="text-2xl font-black uppercase italic text-white">Denoise_X3</h3>
+                      <p className="text-xs text-zinc-500 mt-3 font-medium leading-relaxed">Neural-net background isolation and hiss suppression.</p>
+                      <div className="mt-6 w-full h-[3px] bg-zinc-900 rounded-full overflow-hidden">
+                         <div className="w-2/3 h-full bg-neon group-hover:w-full transition-all duration-700" />
+                      </div>
                     </div>
-                    <div className="p-6 rounded-2xl bg-black border border-studio-border group hover:border-neon/50 transition-all cursor-pointer">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Processing_Rack</span>
-                        <ChevronRight size={16} className="text-zinc-600 group-hover:translate-x-1 transition-transform group-hover:text-neon" />
+                    <div className="p-8 rounded-3xl bg-[#000] border border-studio-border group hover:border-neon/50 transition-all cursor-pointer shadow-xl hover:shadow-neon/5">
+                      <div className="flex items-center justify-between mb-6">
+                        <span className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] border border-zinc-900 px-3 py-1 rounded-full">Analog_Mod_v2</span>
+                        <ChevronRight size={18} className="text-zinc-600 group-hover:translate-x-1 transition-transform group-hover:text-neon" />
                       </div>
-                      <h3 className="text-lg font-black uppercase italic italic">Warm_Valve</h3>
-                      <p className="text-xs text-zinc-500 mt-2 font-medium">Analog-style saturation and equalization.</p>
+                      <h3 className="text-2xl font-black uppercase italic text-white">Warm_Valve</h3>
+                      <p className="text-xs text-zinc-500 mt-3 font-medium leading-relaxed">Tube-style saturation for rich, cinematic voice character.</p>
+                      <div className="mt-6 w-full h-[3px] bg-zinc-900 rounded-full overflow-hidden">
+                         <div className="w-1/2 h-full bg-neon group-hover:w-3/4 transition-all duration-700" />
+                      </div>
                     </div>
                   </div>
                 </section>

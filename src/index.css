@@ -32,6 +32,15 @@
   100% { opacity: 1; filter: drop-shadow(0 0 2px #C9FF00); }
 }
 
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
 .recording-indicator-neon {
   animation: pulse-neon 1s infinite ease-in-out;
 }
