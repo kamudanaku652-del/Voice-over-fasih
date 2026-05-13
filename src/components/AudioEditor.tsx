@@ -152,10 +152,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic'>('neutral');
   const [effects, setEffects] = useState({
     gate: -45,
-    clarity: 6,
-    compression: -22,
-    deEsser: -10,
-    proximity: 4,
+    clarity: 8,
+    compression: -20,
+    deEsser: -12,
+    proximity: 6,
+    warmth: 0.5,
     limit: -1
   });
 
@@ -166,22 +167,39 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const clarityEq = useRef<BiquadFilterNode | null>(null);
   const proximityEq = useRef<BiquadFilterNode | null>(null);
   const deEsser = useRef<BiquadFilterNode | null>(null);
+  const saturator = useRef<WaveShaperNode | null>(null);
 
-  const applyPreset = (type: 'neutral' | 'deep' | 'news' | 'cinematic') => {
-    setActivePreset(type);
+  const applyPreset = (type: 'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive') => {
+    setActivePreset(type as any);
     switch(type) {
       case 'deep':
-        setEffects({ gate: -40, clarity: 4, compression: -18, deEsser: -12, proximity: 8, limit: -1 });
+        setEffects({ gate: -40, clarity: 4, compression: -18, deEsser: -12, proximity: 8, warmth: 0.4, limit: -1 });
         break;
       case 'news':
-        setEffects({ gate: -35, clarity: 10, compression: -24, deEsser: -8, proximity: 2, limit: -0.5 });
+        setEffects({ gate: -35, clarity: 12, compression: -24, deEsser: -8, proximity: 2, warmth: 0.2, limit: -0.5 });
         break;
       case 'cinematic':
-        setEffects({ gate: -50, clarity: 12, compression: -20, deEsser: -15, proximity: 5, limit: -1 });
+        setEffects({ gate: -50, clarity: 14, compression: -20, deEsser: -15, proximity: 5, warmth: 0.7, limit: -1 });
+        break;
+      case 'expensive':
+        setEffects({ gate: -55, clarity: 18, compression: -22, deEsser: -20, proximity: 9, warmth: 1.0, limit: -1 });
         break;
       default:
-        setEffects({ gate: -45, clarity: 6, compression: -22, deEsser: -10, proximity: 4, limit: -1 });
+        setEffects({ gate: -45, clarity: 6, compression: -22, deEsser: -10, proximity: 4, warmth: 0.5, limit: -1 });
     }
+  };
+
+  // Helper for saturation curve
+  const makeDistortionCurve = (amount: number) => {
+    const k = amount * 100;
+    const n_samples = 44100;
+    const curve = new Float32Array(n_samples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < n_samples; ++i) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
   };
 
   // Initialize Audio Processing Chain
@@ -207,6 +225,9 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           clarityEq.current.type = 'highshelf';
           clarityEq.current.frequency.value = 5000;
 
+          saturator.current = audioCtx.current.createWaveShaper();
+          saturator.current.oversample = '4x';
+
           compressor.current = audioCtx.current.createDynamicsCompressor();
           compressor.current.threshold.value = -24;
           compressor.current.knee.value = 30;
@@ -216,12 +237,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           limiter.current.threshold.value = -1;
           limiter.current.knee.value = 0;
           limiter.current.ratio.value = 20;
-          limiter.current.attack.value = 0.001;
-          limiter.current.release.value = 0.1;
           
-          // Chain: Source -> DeEsser -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
+          // Chain: Source -> DeEsser -> Saturator -> Proximity -> Clarity -> Compressor -> Limiter -> Destination
           source.connect(deEsser.current);
-          deEsser.current.connect(proximityEq.current);
+          deEsser.current.connect(saturator.current);
+          saturator.current.connect(proximityEq.current);
           proximityEq.current.connect(clarityEq.current);
           clarityEq.current.connect(compressor.current);
           compressor.current.connect(limiter.current);
@@ -248,7 +268,11 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
     if (deEsser.current) {
       deEsser.current.gain.setValueAtTime(effects.deEsser, audioCtx.current!.currentTime);
     }
+    if (saturator.current) {
+      saturator.current.curve = makeDistortionCurve(effects.warmth);
+    }
   }, [effects]);
+
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -367,13 +391,14 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 { id: 'neutral', name: 'Original_Studio', icon: Activity },
                 { id: 'deep', name: 'Deep_Narrative', icon: Headphones },
                 { id: 'news', name: 'World_Report', icon: Radio },
-                { id: 'cinematic', name: 'Cinematic_Air', icon: Wand2 }
+                { id: 'cinematic', name: 'Cinematic_Air', icon: Wand2 },
+                { id: 'expensive', name: 'Neumann_Luxury', icon: Mic }
               ].map((p) => (
                 <button
                   key={p.id}
                   onClick={() => applyPreset(p.id as any)}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-2xl border transition-all font-black text-xs uppercase italic tracking-widest",
+                    "flex-1 flex items-center justify-center gap-3 py-4 px-6 rounded-2xl border transition-all font-black text-xs uppercase italic tracking-widest min-w-[200px]",
                     activePreset === p.id 
                       ? "bg-neon border-neon text-black shadow-[0_0_30px_#C9FF00]" 
                       : "bg-[#111] border-studio-border text-zinc-500 hover:border-neon/50 hover:text-white"
@@ -386,7 +411,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 border-t border-studio-border pt-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 border-t border-studio-border pt-12">
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">De-Esser</span>
@@ -407,7 +432,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 <span className="text-neon font-mono text-xs">+{effects.proximity}dB</span>
               </div>
               <input 
-                type="range" min="0" max="15" step="1" 
+                type="range" min="0" max="25" step="1" 
                 value={effects.proximity} 
                 onChange={(e) => setEffects({...effects, proximity: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
@@ -417,21 +442,35 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Clarity</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Air_Clarity</span>
                 <span className="text-neon font-mono text-xs">+{effects.clarity}dB</span>
               </div>
               <input 
-                type="range" min="0" max="20" step="1" 
+                type="range" min="0" max="30" step="1" 
                 value={effects.clarity} 
                 onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Voice Definition</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Fasih Definition</p>
             </div>
 
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Safe_Peak</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Tube_Warmth</span>
+                <span className="text-neon font-mono text-xs">{(effects.warmth * 100).toFixed(0)}%</span>
+              </div>
+              <input 
+                type="range" min="0" max="2" step="0.1" 
+                value={effects.warmth} 
+                onChange={(e) => setEffects({...effects, warmth: parseFloat(e.target.value)})}
+                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+              />
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Billion_Dollar_Sat</p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Final_Peak</span>
                 <span className="text-neon font-mono text-xs">{effects.limit}dB</span>
               </div>
               <input 
