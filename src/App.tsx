@@ -5,7 +5,7 @@ import Teleprompter from '@/src/components/Teleprompter';
 import AdminPanel from '@/src/components/AdminPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from './lib/firebase';
-import { signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useUserTier } from './hooks/useUserTier';
 import SubscriptionModal from './components/SubscriptionModal';
 import UserGuideModal from './components/UserGuideModal';
@@ -13,7 +13,7 @@ import UserGuideModal from './components/UserGuideModal';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'library'>('studio');
   const [lang, setLang] = useState<'id' | 'en'>('id');
-  const { user, profile, loading, incrementUsage, usageCount } = useUserTier();
+  const { user, profile, loading, incrementUsage, usageCount, updateProfile } = useUserTier();
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
@@ -21,65 +21,31 @@ export default function App() {
   const isPremium = profile?.subscriptionTier === 'premium';
   const isLimitReached = !isPremium && usageCount >= 10;
 
-  // Handle redirect result on mount
-  React.useEffect(() => {
-    getRedirectResult(auth).catch((err) => {
-      console.error('Redirect result error:', err);
-    });
-  }, []);
-
   const handleLogin = async () => {
+    if (loading) return;
+    
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({
         prompt: 'select_account'
       });
-
-      const isInternalBrowser = /TikTok|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      // On mobile internal browsers (TikTok/IG), popups and redirects are often blocked.
-      // Redirect is slightly more reliable but still needs the host domain whitelisted in Firebase.
-      if (isInternalBrowser) {
-        alert('Kak, browser TikTok/IG sering memblokir login. Tolong klik titik tiga (...) di pojok kanan atas, lalu pilih "Buka di Browser/Open in Chrome/Safari" biar lancar ya!');
-        await signInWithRedirect(auth, provider);
-        return;
-      }
-
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error('Login error:', err);
-      
-      const host = window.location.hostname;
-      
       if (err.code === 'auth/popup-blocked') {
-        alert('Pop-up diblokir nih Kak! Coba klik ikon "Buka di Tab Baru" di pojok kanan atas layar ya, biar loginnya lancar.');
-      } else if (err.code === 'auth/popup-closed-by-user') {
-        // User closed, skip alert
-      } else if (err.code === 'auth/operation-not-allowed') {
-        alert('Metode login ini belum aktif di Firebase Console. Pastikan Google Login sudah di-enable ya.');
-      } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('403')) {
-        const vercelDomain = 'voice-over-fasih.vercel.app';
-        const isVercel = host.includes('vercel.app');
-        const domainToRegister = isVercel ? vercelDomain : host;
-        
-        const confirmCopy = confirm(`Domain "${host}" belum terdaftar di Firebase.\n\nTips Sukses:\n1. Copy domain: ${domainToRegister}\n2. Buka Firebase Console > Authentication > Settings > Authorized Domains\n3. Klik "Add Domain" dan paste di sana.\n\nKlik OK untuk COPY domain sekarang ya Kak!`);
-        if (confirmCopy) {
-          navigator.clipboard.writeText(domainToRegister);
-          alert('Domain berhasil di-copy! Silahkan paste di Firebase > Authorized Domains ya.');
-        }
-      } else if (err.code === 'auth/api-key-not-valid' || err.message?.includes('api-key-not-valid')) {
-        alert('API Key Firebase tidak valid atau dibatasi.\n\nTips:\n1. Pastikan "Identity Toolkit API" sudah Enabled di Google Cloud Console.\n2. Cek apakah ada pembatasan domain (API Key Restrictions) di GCP Console untuk domain Vercel ini.\n3. Coba buat API Key baru di Firebase Settings > General.');
-      } else if (err.message?.includes('iframe') || err.code?.includes('iframe')) {
-        alert('Gagal login via bingkai. Tolong klik tombol "Buka di Tab Baru" di pojok kanan atas ya Kak!');
+        alert('Pop-up login diblokir browser Kak! Coba klik tombol "Buka di Tab Baru" di pojok kanan atas ya.');
       } else {
-        alert(`Gagal login (${err.code || 'Error'}). Coba buka di Tab Baru atau pastikan domain didaftarkan ya Kak!`);
+        alert(`Gagal Login: ${err.message}`);
       }
     }
   };
 
   const handleLogout = async () => {
-    await signOut(auth);
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
   };
   
   return (
@@ -438,6 +404,7 @@ export default function App() {
         onClose={() => setIsSubModalOpen(false)} 
         userId={user?.uid}
         usageCount={usageCount}
+        onUpgrade={() => updateProfile({ subscriptionTier: 'premium' })}
       />
 
       <UserGuideModal 

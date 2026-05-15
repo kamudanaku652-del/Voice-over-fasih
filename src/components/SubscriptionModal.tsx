@@ -1,33 +1,26 @@
 import React from 'react';
 import { Check, X, Star, Zap, ShieldCheck, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { db } from '../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string | undefined;
   usageCount: number;
+  onUpgrade?: () => void;
 }
 
-export default function SubscriptionModal({ isOpen, onClose, userId, usageCount }: SubscriptionModalProps) {
+export default function SubscriptionModal({ isOpen, onClose, userId, usageCount, onUpgrade }: SubscriptionModalProps) {
   const handleUpgrade = async () => {
     if (!userId) {
       alert('Silakan login terlebih dahulu untuk mengaktifkan fitur PRO. Cukup klik tombol Login di pojok kanan atas aplikasi.');
-      onClose();
       return;
     }
-    try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        subscriptionTier: 'premium'
-      });
-      alert('Selamat! Anda sekarang adalah member Premium.');
+    
+    if (onUpgrade) {
+      onUpgrade();
+      alert('Selamat! Anda sekarang adalah member PRO. (Data tersimpan di browser ini)');
       onClose();
-    } catch (err) {
-      console.error('Upgrade error:', err);
-      alert('Gagal mengupgrade. SIlahkan coba lagi.');
     }
   };
 

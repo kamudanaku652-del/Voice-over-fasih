@@ -19,6 +19,8 @@ export default function AdminPanel() {
 
     try {
       const usersRef = collection(db, 'users');
+      // Fix: Firebase list operations require a query. 
+      // Note: If this fails, user might need to add index or ensure data exists.
       const q = query(usersRef, where('email', '==', email.trim().toLowerCase()));
       const querySnapshot = await getDocs(q);
 
@@ -37,7 +39,7 @@ export default function AdminPanel() {
       }
     } catch (error) {
       console.error('Search error:', error);
-      setMessage({ type: 'error', text: 'Error searching user' });
+      setMessage({ type: 'error', text: 'Error searching user (Check if admin or indexed)' });
       setSearchStatus('idle');
     }
   };

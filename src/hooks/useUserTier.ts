@@ -12,7 +12,38 @@ export interface UserProfile {
   role: 'user' | 'admin';
   usageCount: number;
   trialStartDate: string | null;
-  createdAt: any; // Can be Timestamp or FieldValue
+  createdAt: any;
+}
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: any;
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
 }
 
 export function useUserTier() {
@@ -33,12 +64,11 @@ export function useUserTier() {
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
       try {
-        // Use Firestore increment to prevent race conditions and local state reset bugs
         await setDoc(userDocRef, { 
           usageCount: increment(1) 
         }, { merge: true });
       } catch (error) {
-        console.error('Error incrementing usage:', error);
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
       }
     } else {
       const newCount = guestUsage + 1;
@@ -53,7 +83,7 @@ export function useUserTier() {
       if (firebaseUser) {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
-        // Listen for real-time updates to profile (e.g. if they upgrade)
+        // Listen for real-time updates to profile
         const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
@@ -73,31 +103,23 @@ export function useUserTier() {
             const initialTier: Tier = isDevEmail ? 'premium' : 'free';
             const initialRole: 'user' | 'admin' = isDevEmail ? 'admin' : 'user';
 
-            // Create initial profile for new user
             const newProfileData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               subscriptionTier: initialTier,
               role: initialRole,
               usageCount: 0,
-              trialStartDate: new Date().toISOString(),
+              trialStartDate: null,
               createdAt: serverTimestamp(),
             };
             
             setDoc(userDocRef, newProfileData).catch(err => {
-              console.error('Error creating user profile:', err);
+              handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
             });
-            
-            // Local state update (optimistic or temporary until snapshot hits)
-            setProfile({
-              ...newProfileData,
-              subscriptionTier: initialTier,
-              role: initialRole,
-            } as any);
           }
           setLoading(false);
         }, (error) => {
-          console.error('Profile snapshot error:', error);
+          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
           setLoading(false);
         });
 
@@ -111,5 +133,23 @@ export function useUserTier() {
     return () => unsubscribe();
   }, []);
 
-  return { user, profile, loading, incrementUsage, usageCount: profile ? (profile.usageCount || 0) : guestUsage };
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      try {
+        await setDoc(userDocRef, updates, { merge: true });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
+      }
+    }
+  };
+
+  return { 
+    user, 
+    profile, 
+    loading, 
+    incrementUsage, 
+    usageCount: profile ? (profile.usageCount || 0) : guestUsage,
+    updateProfile
+  };
 }
