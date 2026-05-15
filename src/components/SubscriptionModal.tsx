@@ -13,7 +13,11 @@ interface SubscriptionModalProps {
 
 export default function SubscriptionModal({ isOpen, onClose, userId, usageCount }: SubscriptionModalProps) {
   const handleUpgrade = async () => {
-    if (!userId) return;
+    if (!userId) {
+      alert('Silakan login terlebih dahulu untuk mengaktifkan fitur PRO. Cukup klik tombol Login di pojok kanan atas aplikasi.');
+      onClose();
+      return;
+    }
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {

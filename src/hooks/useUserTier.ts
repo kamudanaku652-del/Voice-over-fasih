@@ -18,15 +18,29 @@ export interface UserProfile {
 export function useUserTier() {
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [guestUsage, setGuestUsage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
+  // Initialize guest usage from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('alan_guest_usage');
+    if (saved) {
+      setGuestUsage(parseInt(saved, 10));
+    }
+  }, []);
+
   const incrementUsage = async () => {
-    if (!user) return;
-    const userDocRef = doc(db, 'users', user.uid);
-    // Use Firestore increment to prevent race conditions and local state reset bugs
-    await setDoc(userDocRef, { 
-      usageCount: increment(1) 
-    }, { merge: true });
+    if (user) {
+      const userDocRef = doc(db, 'users', user.uid);
+      // Use Firestore increment to prevent race conditions and local state reset bugs
+      await setDoc(userDocRef, { 
+        usageCount: increment(1) 
+      }, { merge: true });
+    } else {
+      const newCount = guestUsage + 1;
+      setGuestUsage(newCount);
+      localStorage.setItem('alan_guest_usage', newCount.toString());
+    }
   };
 
   useEffect(() => {
@@ -78,5 +92,5 @@ export function useUserTier() {
     return () => unsubscribe();
   }, []);
 
-  return { user, profile, loading, incrementUsage };
+  return { user, profile, loading, incrementUsage, usageCount: profile ? (profile.usageCount || 0) : guestUsage };
 }

@@ -13,12 +13,11 @@ import UserGuideModal from './components/UserGuideModal';
 export default function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'library'>('studio');
   const [lang, setLang] = useState<'id' | 'en'>('id');
-  const { user, profile, loading, incrementUsage } = useUserTier();
+  const { user, profile, loading, incrementUsage, usageCount } = useUserTier();
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
-  const usageCount = profile?.usageCount || 0;
   const isPremium = profile?.subscriptionTier === 'premium';
   const isLimitReached = !isPremium && usageCount >= 10;
 
@@ -94,13 +93,18 @@ export default function App() {
             {lang === 'id' ? 'Panduan' : 'Guide'}
           </button>
           {!user ? (
-            <button 
-              onClick={handleLogin}
-              className="flex items-center gap-2 px-4 py-2 bg-neon rounded-lg text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(201,255,0,0.2)]"
-            >
-              <LogIn size={14} />
-              Login_Console
-            </button>
+            <div className="flex flex-col items-end gap-1">
+              <button 
+                onClick={handleLogin}
+                className="flex items-center gap-2 px-4 py-2 bg-neon rounded-lg text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(201,255,0,0.2)]"
+              >
+                <LogIn size={14} />
+                Login_Console
+              </button>
+              <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic pr-1">
+                Guest_Limit: {usageCount}/10
+              </div>
+            </div>
           ) : (
             <>
               {profile?.subscriptionTier === 'free' && (
