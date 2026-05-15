@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, increment } from 'firebase/firestore';
 
 export type Tier = 'free' | 'premium';
 
@@ -21,10 +21,12 @@ export function useUserTier() {
   const [loading, setLoading] = useState(true);
 
   const incrementUsage = async () => {
-    if (!user || !profile) return;
+    if (!user) return;
     const userDocRef = doc(db, 'users', user.uid);
-    const newCount = (profile.usageCount || 0) + 1;
-    await setDoc(userDocRef, { usageCount: newCount }, { merge: true });
+    // Use Firestore increment to prevent race conditions and local state reset bugs
+    await setDoc(userDocRef, { 
+      usageCount: increment(1) 
+    }, { merge: true });
   };
 
   useEffect(() => {
