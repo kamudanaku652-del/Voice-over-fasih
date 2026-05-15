@@ -24,13 +24,24 @@ export default function App() {
   const handleLogin = async () => {
     try {
       const provider = new GoogleAuthProvider();
+      // Increase reliability for mobile browsers
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error('Login error:', err);
+      
+      const isInternalBrowser = /TikTok|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+      
       if (err.code === 'auth/popup-blocked') {
-        alert('Ups! Pop-up diblokir browser. Tolong ijinkan pop-up di pengaturan browser kamu ya.');
+        alert('Ups! Pop-up diblokir browser. Di HP biasanya muncul di atas, tolong klik "Always Show" atau matikan pemblokir pop-up ya.');
+      } else if (isInternalBrowser) {
+        alert('Browser TikTok/IG sering membatasi login. Tolong klik titik tiga (...) di pojok kanan atas, lalu pilih "Buka di Browser/Open in Chrome/Safari" biar lancar ya Kak!');
+      } else if (err.code === 'auth/network-request-failed') {
+        alert('Sepertinya koneksi internet lagi kurang stabil. Coba ganti ke Wi-Fi atau cek kuota dulu ya!');
       } else {
-        alert('Maaf, ada gangguan saat login. Coba lagi atau buka di Chrome/Safari ya!');
+        alert('Gagal login (Error: ' + (err.code || 'unknown') + '). Coba buka lewat Chrome atau Safari saja ya Kak, biasanya lebih lancar!');
       }
     }
   };
