@@ -14,5 +14,5 @@ if (!config.apiKey || config.apiKey === 'YOUR_API_KEY') {
 }
 
 const app = getApps().length === 0 ? initializeApp(config) : getApp();
-export const db = getFirestore(app); 
+export const db = getFirestore(app, config.firestoreDatabaseId); 
 export const auth = getAuth(app);

@@ -10,17 +10,20 @@ service cloud.firestore {
     // 2. Primitives
     function isSignedIn() { return request.auth != null; }
     function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    
+    // Hardened isAdmin with Bootstrapped Admin support
     function isAdmin() { 
-      // Look up role in the users collection for the current auth user
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return isSignedIn() && (
+        (request.auth.token.email == 'twentyonetiktok55@gmail.com' && request.auth.token.email_verified == true) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
     }
     
     function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
 
-    // 3. User Blueprint
+    // 3. Entity Blueprints
     function isValidUser(data) {
       return data.uid is string && data.uid.size() <= 128 &&
              data.email is string && data.email.size() <= 256 &&
@@ -30,7 +33,15 @@ service cloud.firestore {
              (data.trialStartDate == null || data.trialStartDate is string) &&
              data.createdAt is timestamp;
     }
+    
+    function isValidEdit(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.name is string && data.name.size() <= 100 &&
+             data.effects is map &&
+             data.createdAt is timestamp;
+    }
 
+    // 4. Collections
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       
@@ -39,8 +50,13 @@ service cloud.firestore {
 
       allow create: if isOwner(userId) && 
                       isValidUser(incoming()) && 
-                      incoming().role == 'user' && // Force 'user' role on creation
-                      incoming().subscriptionTier == 'free' &&
+                      (
+                        // Allow specific dev email to bootstrap as admin/premium
+                        (request.auth.token.email == 'twentyonetiktok55@gmail.com' && request.auth.token.email_verified == true)
+                        || 
+                        // Everyone else starts as user/free
+                        (incoming().role == 'user' && incoming().subscriptionTier == 'free')
+                      ) &&
                       incoming().usageCount == 0 &&
                       incoming().createdAt == request.time;
 
@@ -51,7 +67,7 @@ service cloud.firestore {
          incoming().role == existing().role &&
          incoming().subscriptionTier == existing().subscriptionTier &&
          incoming().createdAt == existing().createdAt &&
-         // Allowed fields for user update
+         // Allowed fields for regular user update
          incoming().diff(existing()).affectedKeys().hasOnly(['email', 'trialStartDate', 'usageCount']))
         || 
         (isAdmin() && 
@@ -59,10 +75,22 @@ service cloud.firestore {
          incoming().uid == existing().uid &&
          incoming().role == existing().role &&
          incoming().createdAt == existing().createdAt &&
+         // Admin can change status and usage
          incoming().diff(existing()).affectedKeys().hasOnly(['subscriptionTier', 'usageCount']))
       );
       
       allow delete: if false; // Profiles cannot be deleted via client
+
+      // Subcollection for voice edits
+      match /edits/{editId} {
+        allow get: if isOwner(userId) || isAdmin();
+        allow list: if isOwner(userId) || isAdmin();
+        allow create: if isOwner(userId) && isValidEdit(incoming()) && incoming().createdAt == request.time;
+        allow update: if isOwner(userId) && isValidEdit(incoming()) && 
+                        incoming().createdAt == existing().createdAt &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'effects']);
+        allow delete: if isOwner(userId) || isAdmin();
+      }
     }
   }
 }
