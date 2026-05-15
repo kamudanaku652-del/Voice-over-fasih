@@ -4,13 +4,12 @@ import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Act
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { Tier } from '../hooks/useUserTier';
-import { User as FirebaseUser } from 'firebase/auth';
 
 interface AudioEditorProps {
   onAudioDataChanges?: (blob: Blob) => void;
   onExport?: (blob: Blob, name: string, duration: string) => void;
   tier: Tier;
-  user: FirebaseUser | null;
+  user: { uid: string, email: string } | null;
   usageCount: number;
   incrementUsage: () => Promise<void>;
   onShowSubscription: () => void;
@@ -39,8 +38,12 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
 
   const trackUsage = async () => {
     if (!isPremium && !hasUsedInSession) {
-      await incrementUsage();
-      setHasUsedInSession(true);
+      try {
+        await incrementUsage();
+        setHasUsedInSession(true);
+      } catch (e: any) {
+        alert(e.message || 'Gagal sinkronisasi penggunaan');
+      }
     }
   };
 
@@ -503,7 +506,7 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
       setAudioUrl(null);
       setDuration(0);
       setCurrentTime(0);
-      wavesurfer.current?.load('');
+      wavesurfer.current?.empty();
     }
   };
 

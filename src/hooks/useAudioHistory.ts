@@ -1,16 +1,4 @@
 import { useState, useEffect } from 'react';
-import { db, auth } from '../lib/firebase';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  addDoc, 
-  deleteDoc, 
-  doc, 
-  serverTimestamp,
-  Timestamp 
-} from 'firebase/firestore';
 
 export interface AudioRecording {
   id: string;
@@ -19,77 +7,50 @@ export interface AudioRecording {
   size: string;
   duration: string;
   format: string;
-  createdAt: Timestamp;
+  createdAt: string;
 }
 
-export function useAudioHistory(userId: string | undefined) {
+export function useAudioHistory(_userId: string | undefined) {
   const [recordings, setRecordings] = useState<AudioRecording[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Load from localStorage on mount
   useEffect(() => {
-    if (!userId) {
-      setRecordings([]);
-      setLoading(false);
-      return;
+    const saved = localStorage.getItem('alan_media_vault');
+    if (saved) {
+      try {
+        setRecordings(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse recordings from localStorage');
+      }
     }
+    setLoading(false);
+  }, []);
 
-    const editsRef = collection(db, 'users', userId, 'edits');
-    const q = query(editsRef, orderBy('createdAt', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const records = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as AudioRecording[];
-      setRecordings(records);
-      setLoading(false);
-    }, (err) => {
-      console.error('Error fetching history:', err);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
+  // Sync to localStorage
+  useEffect(() => {
+    if (!loading) {
+      localStorage.setItem('alan_media_vault', JSON.stringify(recordings));
+    }
+  }, [recordings, loading]);
 
   const saveRecording = async (recording: Omit<AudioRecording, 'id' | 'createdAt'>) => {
-    if (!userId) return;
-    try {
-      const editsRef = collection(db, 'users', userId, 'edits');
-      await addDoc(editsRef, {
-        ...recording,
-        userId: userId, // for security rules consistency
-        effects: {}, // placeholder for future
-        createdAt: serverTimestamp()
-      });
-    } catch (err) {
-      console.error('Error saving recording:', err);
-    }
+    const newRecording: AudioRecording = {
+      ...recording,
+      id: Math.random().toString(36).substring(2, 11),
+      createdAt: new Date().toISOString()
+    };
+    setRecordings(prev => [newRecording, ...prev]);
   };
 
   const deleteRecording = async (recordingId: string) => {
-    if (!userId) return;
-    try {
-      const docRef = doc(db, 'users', userId, 'edits', recordingId);
-      await deleteDoc(docRef);
-    } catch (err: any) {
-      console.error('Error deleting recording:', err);
-      alert(`Gagal hapus: ${err.message || 'Masalah koneksi/izin'}`);
-    }
+    setRecordings(prev => prev.filter(r => r.id !== recordingId));
   };
 
   const clearAllRecordings = async () => {
-    if (!userId || recordings.length === 0) return;
+    if (recordings.length === 0) return;
     if (!window.confirm(`Hapus SEMUA (${recordings.length}) rekaman di Vault? Tindakan ini tidak bisa dibatalkan.`)) return;
-    
-    try {
-      // Small deletion loop
-      for (const rec of recordings) {
-        await deleteDoc(doc(db, 'users', userId, 'edits', rec.id));
-      }
-    } catch (err: any) {
-      console.error('Error clearing vault:', err);
-      alert(`Gagal membersihkan vault: ${err.message}`);
-    }
+    setRecordings([]);
   };
 
   return { recordings, loading, saveRecording, deleteRecording, clearAllRecordings };

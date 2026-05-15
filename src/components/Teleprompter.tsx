@@ -96,13 +96,7 @@ export default function Teleprompter({ onTextChange, tier, onShowSubscription }:
 
             <div className="flex items-center gap-1 bg-zinc-50 p-1 rounded-lg border border-zinc-100">
                <button 
-                  onClick={() => {
-                    if (!isPremium) {
-                      onShowSubscription?.();
-                      return;
-                    }
-                    setIsMirror(!isMirror);
-                  }}
+                  onClick={() => setIsMirror(!isMirror)}
                   className={cn(
                     "px-3 py-1 text-[9px] font-black uppercase tracking-widest italic rounded-md transition-all",
                     isMirror ? "bg-black text-white" : "text-zinc-400 hover:text-black"
@@ -111,13 +105,7 @@ export default function Teleprompter({ onTextChange, tier, onShowSubscription }:
                  Mirror
                </button>
                <button 
-                  onClick={() => {
-                    if (!isPremium) {
-                      onShowSubscription?.();
-                      return;
-                    }
-                    setIsVoiceSync(!isVoiceSync);
-                  }}
+                  onClick={() => setIsVoiceSync(!isVoiceSync)}
                   className={cn(
                     "px-3 py-1 text-[9px] font-black uppercase tracking-widest italic rounded-md transition-all flex items-center gap-1",
                     isVoiceSync ? "bg-neon text-black" : "text-zinc-400 hover:text-black"

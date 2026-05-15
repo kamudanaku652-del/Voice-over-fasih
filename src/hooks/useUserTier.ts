@@ -1,7 +1,4 @@
 import { useState, useEffect } from 'react';
-import { auth, db } from '../lib/firebase';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, increment, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export type Tier = 'free' | 'premium';
 
@@ -11,145 +8,123 @@ export interface UserProfile {
   subscriptionTier: Tier;
   role: 'user' | 'admin';
   usageCount: number;
-  trialStartDate: string | null;
-  createdAt: any;
 }
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
+const LOCAL_STORAGE_KEY = 'alan_media_user_state';
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: any;
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+interface LocalState {
+  usageCount: number;
+  tier: Tier;
+  lastReset: string;
 }
 
 export function useUserTier() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [guestUsage, setGuestUsage] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>({
+    uid: 'local-user',
+    email: 'Visitor',
+    subscriptionTier: 'free',
+    role: 'user',
+    usageCount: 0
+  });
 
-  // Initialize guest usage from localStorage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('alan_guest_usage');
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    const today = new Date().toISOString().split('T')[0];
+    
     if (saved) {
-      setGuestUsage(parseInt(saved, 10));
+      const data: LocalState = JSON.parse(saved);
+      // Reset daily if free
+      if (data.tier === 'free' && data.lastReset !== today) {
+        data.usageCount = 0;
+        data.lastReset = today;
+      }
+      
+      setProfile({
+        uid: 'local-user',
+        email: data.tier === 'premium' ? 'Premium Member' : 'Visitor',
+        subscriptionTier: data.tier,
+        role: data.tier === 'premium' ? 'admin' : 'user',
+        usageCount: data.usageCount
+      });
+      
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    } else {
+      const initialState: LocalState = {
+        usageCount: 0,
+        tier: 'free',
+        lastReset: today
+      };
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(initialState));
     }
+    setLoading(false);
   }, []);
 
   const incrementUsage = async () => {
-    if (user) {
-      const userDocRef = doc(db, 'users', user.uid);
-      try {
-        await setDoc(userDocRef, { 
-          usageCount: increment(1) 
-        }, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
-      }
-    } else {
-      const newCount = guestUsage + 1;
-      setGuestUsage(newCount);
-      localStorage.setItem('alan_guest_usage', newCount.toString());
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!saved) return;
+
+    const data: LocalState = JSON.parse(saved);
+    if (data.tier === 'free' && data.usageCount >= 10) {
+      throw new Error('Limit harian tercapai! Upgrade ke Premium untuk akses tak terbatas.');
     }
+
+    data.usageCount += 1;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    
+    setProfile(prev => prev ? { ...prev, usageCount: data.usageCount } : null);
   };
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        
-        // Listen for real-time updates to profile
-        const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            const isDevEmail = firebaseUser.email === 'twentyonetiktok55@gmail.com';
-            
-            setProfile({
-              uid: data.uid || firebaseUser.uid,
-              email: data.email || firebaseUser.email || '',
-              subscriptionTier: (isDevEmail || data.subscriptionTier === 'premium') ? 'premium' : (data.subscriptionTier || 'free'),
-              role: (isDevEmail || data.role === 'admin') ? 'admin' : (data.role || 'user'),
-              usageCount: data.usageCount || 0,
-              trialStartDate: data.trialStartDate || null,
-              createdAt: data.createdAt
-            });
-          } else {
-            const isDevEmail = firebaseUser.email === 'twentyonetiktok55@gmail.com';
-            const initialTier: Tier = isDevEmail ? 'premium' : 'free';
-            const initialRole: 'user' | 'admin' = isDevEmail ? 'admin' : 'user';
+  const upgrade = async () => {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (!saved) return;
 
-            const newProfileData = {
-              uid: firebaseUser.uid,
-              email: firebaseUser.email || '',
-              subscriptionTier: initialTier,
-              role: initialRole,
-              usageCount: 0,
-              trialStartDate: null,
-              createdAt: serverTimestamp(),
-            };
-            
-            setDoc(userDocRef, newProfileData).catch(err => {
-              handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
-            });
-          }
-          setLoading(false);
-        }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
-          setLoading(false);
-        });
-
-        return () => unsubProfile();
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
+    const data: LocalState = JSON.parse(saved);
+    data.tier = 'premium';
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    
+    setProfile({
+      uid: 'local-user',
+      email: 'Premium Member',
+      subscriptionTier: 'premium',
+      role: 'admin',
+      usageCount: data.usageCount
     });
+  };
 
-    return () => unsubscribe();
-  }, []);
-
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (user) {
-      const userDocRef = doc(db, 'users', user.uid);
-      try {
-        await setDoc(userDocRef, updates, { merge: true });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.WRITE, `users/${user.uid}`);
-      }
+  const unlockWithCode = async (code: string) => {
+    // Daftar kode valid (Bisa kakak ganti atau tambah di sini)
+    const VALID_CODES = ['ALAN-MEDIA-PRO', 'VIBRANT-AUDIO-2024', 'SUCCES-JUALAN-KAK'];
+    
+    if (VALID_CODES.includes(code.toUpperCase())) {
+      await upgrade();
+      return true;
     }
+    throw new Error('Kode aktivasi salah atau sudah kadaluarsa!');
+  };
+
+  const logout = async () => {
+    // No-op for local mode
+  };
+
+  const login = async () => {
+    // No-op for local mode
+  };
+
+  const register = async () => {
+    // No-op for local mode
   };
 
   return { 
-    user, 
+    user: profile ? { uid: profile.uid, email: profile.email } : null,
     profile, 
     loading, 
     incrementUsage, 
-    usageCount: profile ? (profile.usageCount || 0) : guestUsage,
-    updateProfile
+    usageCount: profile?.usageCount || 0,
+    login,
+    register,
+    logout,
+    upgrade,
+    unlockWithCode
   };
 }

@@ -27,10 +27,6 @@ export default function VoiceStudio({ onExport, isPremium, onShowSubscription }:
 
   const handleGenerate = async () => {
     if (!text.trim()) return;
-    if (!isPremium && text.length > 100) {
-      onShowSubscription();
-      return;
-    }
 
     setIsGenerating(true);
     try {
@@ -95,17 +91,9 @@ export default function VoiceStudio({ onExport, isPremium, onShowSubscription }:
               className="w-full h-40 bg-zinc-900/50 border border-studio-border rounded-2xl p-6 text-sm text-zinc-300 focus:outline-none focus:border-neon transition-all font-medium placeholder:text-zinc-700 resize-none"
             />
             <div className="absolute bottom-4 right-4 flex items-center gap-3">
-              <span className={`text-[10px] font-black uppercase italic ${text.length > 500 ? 'text-red-500' : 'text-zinc-600'}`}>
-                {text.length} / {isPremium ? '2000' : '100'} Simbol
+              <span className={`text-[10px] font-black uppercase italic text-zinc-600`}>
+                {text.length} Simbol
               </span>
-              {!isPremium && (
-                <button 
-                  onClick={onShowSubscription}
-                  className="text-[9px] font-black text-neon uppercase italic hover:underline"
-                >
-                  UPGRADE_FOR_MORE
-                </button>
-              )}
             </div>
           </div>
 
@@ -212,7 +200,7 @@ export default function VoiceStudio({ onExport, isPremium, onShowSubscription }:
         </div>
       </div>
 
-      <audio ref={audioRef} src={audioUrl || ''} className="hidden" />
+      <audio ref={audioRef} src={audioUrl || null} className="hidden" />
     </div>
   );
 }
