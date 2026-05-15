@@ -25,9 +25,13 @@ export default function App() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Login error:', err);
-      alert('Gagal login. Pastikan koneksi aman.');
+      if (err.code === 'auth/popup-blocked') {
+        alert('Ups! Pop-up diblokir browser. Tolong ijinkan pop-up di pengaturan browser kamu ya.');
+      } else {
+        alert('Maaf, ada gangguan saat login. Coba lagi atau buka di Chrome/Safari ya!');
+      }
     }
   };
 
@@ -99,7 +103,7 @@ export default function App() {
                 className="flex items-center gap-2 px-4 py-2 bg-neon rounded-lg text-black font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(201,255,0,0.2)]"
               >
                 <LogIn size={14} />
-                Login_Console
+                LOGIN
               </button>
               <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic pr-1">
                 Guest_Limit: {usageCount}/10
