@@ -1,10 +1,10 @@
 {
-  "projectId": "ambient-adviser-807pf",
-  "appId": "1:361533908884:web:e90fddb531c3bbfed99181",
-  "apiKey": "AIzaSyCX9NhC07-qYqMOjcjSkwZynH4GhIBdCfA",
-  "authDomain": "ambient-adviser-807pf.firebaseapp.com",
+  "projectId": "voice-over-fasih",
+  "appId": "1:284564619898:web:6f41b36e82bc6402abb1c3",
+  "apiKey": "AIzaSyB7LtnfCXkt4tJIKgSjFxPgX3UQbs1nVo0",
+  "authDomain": "voice-over-fasih.firebaseapp.com",
   "firestoreDatabaseId": "ai-studio-30a676cb-940f-4f65-8d39-748de3f34c22",
-  "storageBucket": "ambient-adviser-807pf.firebasestorage.app",
-  "messagingSenderId": "361533908884",
+  "storageBucket": "voice-over-fasih.firebasestorage.app",
+  "messagingSenderId": "284564619898",
   "measurementId": ""
 }

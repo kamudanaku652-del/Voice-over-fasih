@@ -37,6 +37,10 @@ service cloud.firestore {
     function isValidEdit(data) {
       return data.userId is string && data.userId.size() <= 128 &&
              data.name is string && data.name.size() <= 100 &&
+             data.date is string &&
+             data.size is string &&
+             data.duration is string &&
+             data.format is string &&
              data.effects is map &&
              data.createdAt is timestamp;
     }
@@ -90,7 +94,7 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidEdit(incoming()) && incoming().createdAt == request.time;
         allow update: if isOwner(userId) && isValidEdit(incoming()) && 
                         incoming().createdAt == existing().createdAt &&
-                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'effects']);
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'effects', 'date', 'size', 'duration', 'format']);
         allow delete: if isOwner(userId) || isAdmin();
       }
     }

@@ -20,7 +20,7 @@
         "./*"
       ]
     },
-    "types": ["vite-plugin-pwa/client"],
+    "types": ["vite-plugin-pwa/client", "vite/client"],
     "allowImportingTsExtensions": true,
     "noEmit": true
   }

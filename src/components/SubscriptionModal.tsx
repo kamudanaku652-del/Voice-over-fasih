@@ -26,7 +26,7 @@ export default function SubscriptionModal({ isOpen, onClose, userId, usageCount,
 
   if (!isOpen) return null;
 
-  const isLimitReached = usageCount >= 10;
+  const isLimitReached = usageCount >= 50;
 
   return (
     <AnimatePresence>
@@ -62,7 +62,7 @@ export default function SubscriptionModal({ isOpen, onClose, userId, usageCount,
             </h2>
             <p className="text-zinc-500 font-black uppercase italic tracking-[0.2em] text-xs">
               {isLimitReached 
-                ? "Sesi uji coba 10x Anda telah berakhir. Upgrade untuk akses tak terbatas."
+                ? "Sesi uji coba 50x Anda telah berakhir. Upgrade untuk akses tak terbatas."
                 : "Dapatkan kualitas studio radio premium dalam satu klik."}
             </p>
           </div>
@@ -76,16 +76,16 @@ export default function SubscriptionModal({ isOpen, onClose, userId, usageCount,
                   <h3 className="text-4xl font-black italic text-zinc-400 uppercase">Edisi_Trial</h3>
                 </div>
                 
-                <div className="text-5xl font-black text-zinc-200 italic">10<span className="text-sm text-zinc-600 font-bold ml-2">SESI_MASTERING</span></div>
+                <div className="text-5xl font-black text-zinc-200 italic">50<span className="text-sm text-zinc-600 font-bold ml-2">SESI_MASTERING</span></div>
 
                 <div className="w-full bg-zinc-900 h-2 rounded-full overflow-hidden">
                    <div 
                     className="h-full bg-zinc-700 transition-all duration-1000" 
-                    style={{ width: `${Math.min(usageCount * 10, 100)}%` }}
+                    style={{ width: `${Math.min(usageCount * 2, 100)}%` }}
                    />
                 </div>
                 <p className="text-[10px] font-black text-zinc-600 uppercase italic tracking-widest">
-                  Sisa_Trial: {Math.max(0, 10 - usageCount)} Penggunaan
+                  Sisa_Trial: {Math.max(0, 50 - usageCount)} Penggunaan
                 </p>
 
                 <ul className="space-y-4 pt-6">
@@ -93,7 +93,7 @@ export default function SubscriptionModal({ isOpen, onClose, userId, usageCount,
                      'Hardware Processing Dasar',
                      'Perekaman Audio Standar',
                      'Denoise Level 1',
-                     '10x Kuota Export'
+                     '50x Kuota Export'
                    ].map((feat, i) => (
                      <li key={i} className="flex items-center gap-4 text-xs text-zinc-500 font-black uppercase italic tracking-wider">
                        <Check size={16} className="text-zinc-700" /> {feat}

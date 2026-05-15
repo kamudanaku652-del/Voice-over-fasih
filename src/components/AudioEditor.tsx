@@ -4,16 +4,19 @@ import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Act
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { Tier } from '../hooks/useUserTier';
+import { User as FirebaseUser } from 'firebase/auth';
 
 interface AudioEditorProps {
   onAudioDataChanges?: (blob: Blob) => void;
+  onExport?: (blob: Blob, name: string, duration: string) => void;
   tier: Tier;
+  user: FirebaseUser | null;
   usageCount: number;
   incrementUsage: () => Promise<void>;
   onShowSubscription: () => void;
 }
 
-export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incrementUsage, onShowSubscription }: AudioEditorProps) {
+export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, usageCount, incrementUsage, onShowSubscription }: AudioEditorProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -473,11 +476,26 @@ export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incr
       onShowSubscription();
       return;
     }
-    await trackUsage();
-    const link = document.createElement('a');
-    link.href = audioUrl;
-    link.download = `ALAN_VO_PRO_${new Date().getTime()}.${exportFormat}`;
-    link.click();
+    
+    setIsProcessing(true);
+    try {
+      const response = await fetch(audioUrl);
+      const blob = await response.blob();
+      const fileName = `ALAN_VO_PRO_${new Date().getTime()}`;
+      
+      await trackUsage();
+      
+      onExport?.(blob, `${fileName}.${exportFormat}`, formatTime(duration));
+
+      const link = document.createElement('a');
+      link.href = audioUrl;
+      link.download = `${fileName}.${exportFormat}`;
+      link.click();
+    } catch (err) {
+      console.error('Export error:', err);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const clearAudio = () => {

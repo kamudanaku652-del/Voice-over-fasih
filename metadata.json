@@ -1,6 +1,6 @@
 {
-  "name": "Alan Voice Edit",
-  "description": "Aplikasi rekam dan edit pengisi suara (VO) profesional dengan visualisasi gelombang dan fitur cerdas untuk hasil rekaman yang fasih.",
+  "name": "Alan Media Voice Studio PRO",
+  "description": "Professional AI Voice Over & Studio Mastering Engine. Menghasilkan suara fasih, jernih, dan natural dengan teknologi Neural-AI.",
   "requestFramePermissions": ["microphone"],
   "majorCapabilities": []
 }

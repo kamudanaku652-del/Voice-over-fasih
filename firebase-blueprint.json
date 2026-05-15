@@ -13,7 +13,7 @@
         "trialStartDate": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "email", "subscriptionTier", "createdAt"]
+      "required": ["uid", "email", "subscriptionTier", "role", "usageCount", "createdAt"]
     },
     "VoiceEdit": {
       "title": "Voice Edit",
@@ -22,10 +22,14 @@
       "properties": {
         "userId": { "type": "string" },
         "name": { "type": "string" },
+        "date": { "type": "string" },
+        "size": { "type": "string" },
+        "duration": { "type": "string" },
+        "format": { "type": "string" },
         "effects": { "type": "object" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["userId", "name", "effects", "createdAt"]
+      "required": ["userId", "name", "date", "size", "duration", "format", "createdAt"]
     }
   },
   "firestore": {

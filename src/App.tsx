@@ -1,25 +1,30 @@
 import React, { useState } from 'react';
-import { Mic, Radio, Settings, User, Signal, Cpu, Headphones, ChevronRight, LogIn, LogOut, Crown, Menu, Info, X } from 'lucide-react';
+import { Mic, Radio, Settings, User, Signal, Cpu, Headphones, ChevronRight, LogIn, LogOut, Crown, Menu, Info, X, Trash2, Sparkles } from 'lucide-react';
 import AudioEditor from '@/src/components/AudioEditor';
 import Teleprompter from '@/src/components/Teleprompter';
+import VoiceStudio from '@/src/components/VoiceStudio';
 import AdminPanel from '@/src/components/AdminPanel';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth } from './lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useUserTier } from './hooks/useUserTier';
+import { useAudioHistory } from './hooks/useAudioHistory';
 import SubscriptionModal from './components/SubscriptionModal';
 import UserGuideModal from './components/UserGuideModal';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'studio' | 'library'>('studio');
+  const [activeTab, setActiveTab] = useState<'studio' | 'library' | 'voice'>('studio');
   const [lang, setLang] = useState<'id' | 'en'>('id');
   const { user, profile, loading, incrementUsage, usageCount, updateProfile } = useUserTier();
+  const { recordings, saveRecording, deleteRecording, clearAllRecordings } = useAudioHistory(user?.uid);
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserGuideOpen, setIsUserGuideOpen] = useState(false);
 
   const isPremium = profile?.subscriptionTier === 'premium';
-  const isLimitReached = !isPremium && usageCount >= 10;
+  const isLimitReached = !isPremium && usageCount >= 50;
+
+  const appDomain = window.location.hostname;
 
   const handleLogin = async () => {
     if (loading) return;
@@ -32,10 +37,15 @@ export default function App() {
       await signInWithPopup(auth, provider);
     } catch (err: any) {
       console.error('Login error:', err);
+      // Enhanced feedback for mobile and domain issues
       if (err.code === 'auth/popup-blocked') {
-        alert('Pop-up login diblokir browser Kak! Coba klik tombol "Buka di Tab Baru" di pojok kanan atas ya.');
+        alert('Ups! Pop-up login diblokir browser Kak. Klik ikon gembok/pengaturan di address bar lalu pilih "Izinkan Pop-up" ya!');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        alert(`Domain [${appDomain}] belum terdaftar di Firebase Kak! \n\nCARANYA:\n1. Buka Firebase Console\n2. Ke Auth -> Settings -> Authorized Domains\n3. Klik "Add Domain"\n4. Masukkan: ${appDomain}\n5. Klik "Add" dan coba login lagi!`);
+      } else if (err.message?.includes('permission')) {
+        alert('Masalah izin Google Kak. Pastikan Kakak login dengan email yang benar dan tidak dalam mode incognito/privat.');
       } else {
-        alert(`Gagal Login: ${err.message}`);
+        alert(`Gagal Login: ${err.message}. Coba refresh halaman ya Kak.`);
       }
     }
   };
@@ -46,6 +56,20 @@ export default function App() {
     } catch (err) {
       console.error('Logout error:', err);
     }
+  };
+
+  const handleExport = async (blob: Blob, name: string, duration: string) => {
+    if (user) {
+      const sizeStr = (blob.size / (1024 * 1024)).toFixed(1) + ' MB';
+      await saveRecording({
+        name,
+        date: new Date().toISOString().split('T')[0],
+        size: sizeStr,
+        duration,
+        format: 'wav'
+      });
+    }
+    // usage increment is handled in AudioEditor component
   };
   
   return (
@@ -89,7 +113,14 @@ export default function App() {
             onClick={() => setActiveTab('library')}
             className={`px-8 py-2 text-[11px] font-black tracking-widest uppercase transition-all italic border-b-2 ${activeTab === 'library' ? 'border-neon text-neon' : 'border-transparent text-zinc-500 hover:text-white'}`}
           >
-            Media_Library
+            Media_Library ({recordings.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('voice')}
+            className={`px-8 py-2 text-[11px] font-black tracking-widest uppercase transition-all italic border-b-2 relative ${activeTab === 'voice' ? 'border-neon text-neon' : 'border-transparent text-zinc-500 hover:text-white'}`}
+          >
+            Voice_Lab
+            <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[7px] px-1 rounded animate-pulse">FASIH</span>
           </button>
         </nav>
 
@@ -118,7 +149,7 @@ export default function App() {
                 LOGIN
               </button>
               <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic pr-1">
-                Guest_Limit: {usageCount}/10
+                Guest_Limit: {usageCount}/50
               </div>
             </div>
           ) : (
@@ -146,7 +177,7 @@ export default function App() {
                 </div>
                 {!isPremium && user && (
                   <div className="text-[9px] font-black text-zinc-600 uppercase tracking-widest italic pr-1">
-                    Trial_Usage: {usageCount}/10
+                    Trial_Usage: {usageCount}/50
                   </div>
                 )}
               </div>
@@ -166,9 +197,56 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-4 md:p-12 max-w-[1600px] mx-auto w-full overflow-hidden">
+      <main className="flex-1 p-4 md:p-12 max-w-[1600px] mx-auto w-full overflow-hidden relative">
         <AnimatePresence mode="wait">
-          {activeTab === 'studio' ? (
+          {!user && !loading ? (
+            <motion.div 
+              key="landing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="flex flex-col items-center justify-center h-full text-center space-y-12 py-12"
+            >
+              <div className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-neon/10 border border-neon/30 rounded-full text-[10px] font-black text-neon uppercase tracking-[0.3em] animate-pulse">
+                  <Crown size={12} /> Alan_Media_Professional_Access
+                </div>
+                <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-none">
+                  Voice_Lab<br/><span className="text-neon">Professional.</span>
+                </h2>
+                <p className="text-sm md:text-xl text-zinc-500 font-medium max-w-2xl mx-auto italic">
+                  Solusi editing audio dan voice-over AI tercanggih dengan intonasi fasih, jernih, dan natural. Siap pakai untuk Podcast, Konten Viral, dan Voice Talent.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
+                {[
+                  { icon: <Sparkles size={24}/>, title: 'Voice_Fasih', desc: 'AI dengan intonasi manusia asli, bukan robot kaku.' },
+                  { icon: <Mic size={24}/>, title: 'Studio_Grade', desc: 'Edit vokal otomatis dengan teknologi neural-net.' },
+                  { icon: <Cpu size={24}/>, title: 'Ultra_Fast', desc: 'Proses secepat kilat tanpa repot setting manual.' },
+                ].map((f, i) => (
+                  <div key={i} className="p-8 rounded-3xl bg-black/40 border border-studio-border hover:border-neon transition-all">
+                    <div className="text-neon mb-4">{f.icon}</div>
+                    <h3 className="text-lg font-black uppercase italic text-white mb-2">{f.title}</h3>
+                    <p className="text-xs text-zinc-600 font-bold uppercase tracking-wider">{f.desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col items-center gap-6 pt-10">
+                <button 
+                  onClick={handleLogin}
+                  className="px-12 py-6 bg-neon text-black rounded-2xl font-black uppercase italic text-xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(201,255,0,0.3)]"
+                >
+                  <LogIn size={24} /> Masuk_Sekarang
+                </button>
+                
+                <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.4em] italic mt-4">
+                   Exclusive Professional Access • AI Powered Studio
+                </p>
+              </div>
+            </motion.div>
+          ) : activeTab === 'studio' ? (
             <motion.div 
               key="studio"
               initial={{ opacity: 0, y: 10 }}
@@ -215,9 +293,19 @@ export default function App() {
                       <h2 className="text-4xl md:text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
                         Master<span className="text-neon">_Rack</span>
                       </h2>
-                      <p className="text-[9px] font-black text-neon uppercase tracking-[0.2em] italic bg-neon/10 w-fit px-3 py-1 rounded-full border border-neon/20">
-                        ⚡ Proses edit otomatis & tidak perlu waktu lama
-                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <p className="text-[9px] font-black text-neon uppercase tracking-[0.2em] italic bg-neon/10 w-fit px-3 py-1 rounded-full border border-neon/20">
+                          ⚡ Proses edit otomatis & tidak perlu waktu lama
+                        </p>
+                        {profile?.role === 'admin' && (
+                          <button 
+                            onClick={() => updateProfile({ usageCount: 0 })}
+                            className="text-[9px] font-black text-red-400 uppercase tracking-[0.2em] italic bg-red-400/10 w-fit px-3 py-1 rounded-full border border-red-400/20 hover:bg-red-400 hover:text-black transition-all"
+                          >
+                            RESET_MY_QUOTA
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <div className="hidden sm:flex items-center gap-8 text-[11px] font-black text-zinc-500 uppercase tracking-widest italic border border-studio-border px-6 py-3 rounded-2xl bg-black/50">
                       <span className="flex items-center gap-2 decoration-neon hover:underline cursor-none transition-all"><Signal size={14} className="text-neon" /> 48khz_Lossless</span>
@@ -228,9 +316,14 @@ export default function App() {
 
                   <AudioEditor 
                     tier={profile?.subscriptionTier || 'free'} 
+                    user={user}
                     onShowSubscription={() => setIsSubModalOpen(true)}
                     usageCount={usageCount}
                     incrementUsage={incrementUsage}
+                    onAudioDataChanges={(blob) => {
+                       // Optional: autosave or handle preview
+                    }}
+                    onExport={(blob, name, duration) => handleExport(blob, name, duration)}
                   />
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
@@ -270,12 +363,12 @@ export default function App() {
                 </section>
               </div>
             </motion.div>
-          ) : (
+          ) : activeTab === 'library' ? (
             <motion.div 
               key="library"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
               className="flex flex-col h-full space-y-8"
             >
               <div className="flex items-end justify-between border-b border-studio-border pb-4">
@@ -283,36 +376,87 @@ export default function App() {
                   <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">Storage_Archive</p>
                   <h2 className="text-5xl font-black tracking-tight uppercase italic text-white">Media_Vault</h2>
                 </div>
-                <div className="text-[10px] font-black text-neon uppercase tracking-widest italic">
-                  3_SESSIONS_FOUND
+                <div className="flex items-center gap-4">
+                  <div className="text-[10px] font-black text-neon uppercase tracking-widest italic">
+                    {recordings.length}_SESSIONS_FOUND
+                  </div>
+                  {recordings.length > 0 && (
+                    <button 
+                      onClick={clearAllRecordings}
+                      className="text-[9px] font-black text-red-500/50 hover:text-red-500 uppercase tracking-widest border border-red-500/10 hover:border-red-500/30 px-3 py-1 rounded-full transition-all"
+                    >
+                      Clear_All_Vault
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[
-                  { name: 'Commercial_Ad_V1.wav', date: '2024-05-12', size: '2.4 MB', duration: '00:45' },
-                  { name: 'Podcast_Intro_Final.wav', date: '2024-05-10', size: '1.8 MB', duration: '00:15' },
-                  { name: 'Documentary_Narration.wav', date: '2024-05-08', size: '4.2 MB', duration: '01:20' }
-                ].map((item, i) => (
-                  <div key={i} className="bg-black border border-studio-border p-6 rounded-2xl hover:border-neon transition-all group cursor-pointer" onClick={() => profile?.subscriptionTier === 'free' && setIsSubModalOpen(true)}>
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-neon">
-                         <Headphones size={20} />
+              {recordings.length === 0 ? (
+                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-20 opacity-40">
+                    <Headphones size={48} className="text-zinc-700" />
+                    <p className="text-xs text-zinc-500 max-w-sm font-medium uppercase tracking-widest italic">Belum ada rekaman tersimpan. Record atau upload file dan klik 'Export' untuk menyimpan di sini.</p>
+                 </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {recordings.map((item) => (
+                    <div key={item.id} className="bg-black border border-studio-border p-6 rounded-2xl hover:border-neon transition-all group relative">
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('Hapus rekaman ini dari Vault?')) {
+                             deleteRecording(item.id);
+                          }
+                        }}
+                        className="absolute top-4 right-4 p-2 text-zinc-800 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                      >
+                         <Trash2 size={16} />
+                      </button>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center text-neon">
+                           <Headphones size={20} />
+                        </div>
+                        <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest pt-1">{item.size}</span>
                       </div>
-                      <span className="text-[9px] font-black text-zinc-700 uppercase tracking-widest">{item.size}</span>
+                      <h3 className="text-lg font-black uppercase italic truncate pr-8">{item.name}</h3>
+                      <div className="flex justify-between items-center mt-6">
+                        <span className="text-[10px] font-black text-zinc-500 uppercase">{item.date}</span>
+                        <div className="flex items-center gap-2">
+                           <span className="text-[10px] font-black text-neon uppercase">{item.duration}</span>
+                           <span className="text-[8px] font-bold text-zinc-800 uppercase bg-zinc-900 px-1 rounded">{item.format}</span>
+                        </div>
+                      </div>
                     </div>
-                    <h3 className="text-lg font-black uppercase italic truncate">{item.name}</h3>
-                    <div className="flex justify-between items-center mt-6">
-                      <span className="text-[10px] font-black text-zinc-500 uppercase">{item.date}</span>
-                      <span className="text-[10px] font-black text-neon uppercase">{item.duration}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+
+              {recordings.length > 0 && (
+                <div className="text-center py-10 opacity-30">
+                  <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest italic">End_of_Vault_System</p>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="voice"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              className="space-y-12 h-full overflow-y-auto"
+            >
+               <div className="flex items-end justify-between border-b border-studio-border pb-6">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.3em] text-zinc-600 italic">AI_Vocal_Synthesis</p>
+                  <h2 className="text-5xl font-black tracking-tight uppercase italic text-white flex items-center gap-4">
+                     Voice<span className="text-neon">_Lab</span>
+                  </h2>
+                </div>
               </div>
 
-              <div className="flex-1 flex flex-col items-center justify-center text-center space-y-6 py-20 opacity-40">
-                <p className="text-xs text-zinc-500 max-w-sm font-medium uppercase tracking-widest italic">Additional archives will appear here after export.</p>
-              </div>
+              <VoiceStudio 
+                isPremium={isPremium}
+                onShowSubscription={() => setIsSubModalOpen(true)}
+                onExport={(blob, name, duration) => handleExport(blob, name, duration)}
+              />
             </motion.div>
           )}
         </AnimatePresence>
@@ -355,7 +499,7 @@ export default function App() {
                   {!isPremium && user && (
                     <div className="pt-2 border-t border-white/5 flex justify-between items-center">
                       <span className="text-[9px] font-black text-zinc-500 uppercase italic">Quota_Used</span>
-                      <span className="text-[10px] font-black text-white italic">{usageCount}/10</span>
+                      <span className="text-[10px] font-black text-white italic">{usageCount}/50</span>
                     </div>
                   )}
                 </div>
@@ -371,7 +515,14 @@ export default function App() {
                     onClick={() => { setActiveTab('library'); setIsMobileMenuOpen(false); }}
                     className={`flex items-center gap-4 px-6 py-4 rounded-xl text-xs font-black uppercase italic tracking-widest transition-all ${activeTab === 'library' ? 'bg-neon text-black' : 'text-zinc-500 hover:bg-white/5'}`}
                   >
-                    <Headphones size={18} /> Media_Library
+                    <Headphones size={18} /> Media_Library ({recordings.length})
+                  </button>
+                  <button 
+                    onClick={() => { setActiveTab('voice'); setIsMobileMenuOpen(false); }}
+                    className={`flex items-center gap-4 px-6 py-4 rounded-xl text-xs font-black uppercase italic tracking-widest transition-all relative ${activeTab === 'voice' ? 'bg-neon text-black' : 'text-zinc-500 hover:bg-white/5'}`}
+                  >
+                    <Sparkles size={18} /> Voice_Lab
+                    <span className="absolute top-2 right-4 bg-red-500 text-white text-[6px] px-1 rounded">FASIH</span>
                   </button>
                   <button 
                     onClick={() => { setIsUserGuideOpen(true); setIsMobileMenuOpen(false); }}
