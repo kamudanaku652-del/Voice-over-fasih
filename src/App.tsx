@@ -5,7 +5,7 @@ import Teleprompter from '@/src/components/Teleprompter';
 import VoiceStudio from '@/src/components/VoiceStudio';
 import AdminPanel from '@/src/components/AdminPanel';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth } from './lib/firebase';
+import { auth, firebaseReady } from './lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
 import { useUserTier } from './hooks/useUserTier';
 import { useAudioHistory } from './hooks/useAudioHistory';
@@ -23,8 +23,41 @@ export default function App() {
 
   const isPremium = profile?.subscriptionTier === 'premium';
   const isLimitReached = !isPremium && usageCount >= 50;
+  const isOwner = user?.email === 'twentyonetiktok55@gmail.com';
 
   const appDomain = window.location.hostname;
+
+  if (!firebaseReady) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-6 text-center">
+        <div className="max-w-md space-y-8">
+          <div className="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto animate-pulse">
+            <Settings size={40} className="text-red-500" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter">System_Failure_01</h2>
+            <p className="text-zinc-500 text-sm italic font-medium leading-relaxed">
+              Konfigurasi Firebase belum lengkap untuk domain ini. Pastikan environment variables sudah diset di Vercel/Hosting Kakak.
+            </p>
+          </div>
+          <div className="p-6 bg-zinc-900/50 border border-zinc-800 rounded-3xl text-left space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full" />
+              <span className="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Required Configuration:</span>
+            </div>
+            <ul className="text-[11px] font-mono text-zinc-500 space-y-2 list-disc pl-4">
+              <li>VITE_FIREBASE_API_KEY</li>
+              <li>VITE_FIREBASE_AUTH_DOMAIN</li>
+              <li>VITE_FIREBASE_PROJECT_ID</li>
+            </ul>
+          </div>
+          <p className="text-[9px] font-black text-zinc-700 uppercase tracking-widest italic">
+            Check logs for more details • Alan Neural Engine
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogin = async () => {
     if (loading) return;
