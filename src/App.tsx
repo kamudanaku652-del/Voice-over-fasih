@@ -233,17 +233,26 @@ export default function App() {
                 ))}
               </div>
 
-              <div className="flex flex-col items-center gap-6 pt-10">
+              <div className="flex flex-col items-center gap-8 pt-10">
                 <button 
                   onClick={handleLogin}
-                  className="px-12 py-6 bg-neon text-black rounded-2xl font-black uppercase italic text-xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(201,255,0,0.3)]"
+                  className="px-12 py-6 bg-neon text-black rounded-2xl font-black uppercase italic text-xl flex items-center gap-4 hover:scale-105 active:scale-95 transition-all shadow-[0_20px_50px_rgba(201,255,0,0.3)] group relative overflow-hidden"
                 >
-                  <LogIn size={24} /> Masuk_Sekarang
+                  <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out" />
+                  <LogIn size={24} className="group-hover:translate-x-1 transition-transform relative z-10" /> 
+                  <span className="relative z-10">Mulai_Akses_PRO</span>
                 </button>
                 
-                <p className="text-[10px] text-zinc-700 font-black uppercase tracking-[0.4em] italic mt-4">
-                   Exclusive Professional Access • AI Powered Studio
-                </p>
+                <div className="flex flex-col items-center gap-4">
+                  <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.6em] italic">
+                    Certified AI Neural Studio Access
+                  </p>
+                  <div className="flex items-center gap-6 opacity-20 grayscale grayscale-100">
+                    <div className="w-8 h-8 rounded-lg bg-white/20" />
+                    <div className="w-8 h-8 rounded-lg bg-white/20" />
+                    <div className="w-8 h-8 rounded-lg bg-white/20" />
+                  </div>
+                </div>
               </div>
             </motion.div>
           ) : activeTab === 'studio' ? (
