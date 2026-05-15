@@ -92,8 +92,8 @@ export function useUserTier() {
             setProfile({
               uid: data.uid || firebaseUser.uid,
               email: data.email || firebaseUser.email || '',
-              subscriptionTier: isDevEmail ? 'premium' : (data.subscriptionTier || 'free'),
-              role: (isDevEmail || data.role === 'admin') ? 'admin' : 'user',
+              subscriptionTier: (isDevEmail || data.subscriptionTier === 'premium') ? 'premium' : (data.subscriptionTier || 'free'),
+              role: (isDevEmail || data.role === 'admin') ? 'admin' : (data.role || 'user'),
               usageCount: data.usageCount || 0,
               trialStartDate: data.trialStartDate || null,
               createdAt: data.createdAt

@@ -71,6 +71,9 @@ export default function App() {
               <span className="hidden xs:inline-flex items-center gap-1 text-neon/50 bg-neon/5 px-2 py-0.5 rounded border border-neon/10">
                 <Cpu size={8} /> Local_Edge_Processing
               </span>
+              <a href="https://voice-over-fasih.vercel.app/" target="_blank" rel="noreferrer" className="hidden md:inline-flex items-center gap-1 text-blue-400/50 hover:text-blue-400 transition-colors">
+                (Backup_Mirror)
+              </a>
             </p>
           </div>
         </div>
@@ -419,6 +422,10 @@ export default function App() {
           <div className="flex items-center gap-2 md:gap-3">
             <span className="w-2 h-2 bg-neon rounded-full recording-indicator-neon" />
             <span className="text-[9px] md:text-[11px] font-black text-zinc-500 uppercase tracking-widest italic">Live: Active</span>
+          </div>
+          <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-white/5 rounded border border-white/10">
+             <Signal size={10} className="text-blue-400" />
+             <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Auth_Domain_Limit: Active (Starter_Tier)</span>
           </div>
           <div className="hidden xs:flex items-center gap-3">
             <Headphones size={14} className="text-zinc-600" />

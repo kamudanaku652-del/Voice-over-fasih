@@ -581,11 +581,14 @@ export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incr
       {/* Mastering Rack (Conditional) */}
       {showEffects && (
         <div className="bg-[#000] border border-neon/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700 relative">
-          {!isPremium && (
+          {!isPremium && user && (
             <div className="absolute top-6 right-12 z-20">
-               <div className="flex items-center gap-2 px-4 py-2 border border-blue-400/50 bg-blue-400/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">
-                  <Crown size={12} /> Mode_Premium_Terkunci
-               </div>
+               <button 
+                  onClick={onShowSubscription}
+                  className="flex items-center gap-2 px-4 py-2 border border-blue-400/50 bg-blue-400/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-blue-400 hover:text-white transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)]"
+               >
+                  <Crown size={12} /> Buka_Fitur_Premium
+               </button>
             </div>
           )}
 

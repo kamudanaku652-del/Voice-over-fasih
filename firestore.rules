@@ -29,7 +29,7 @@ service cloud.firestore {
              data.email is string && data.email.size() <= 256 &&
              data.subscriptionTier in ['free', 'premium'] &&
              data.role in ['user', 'admin'] &&
-             data.usageCount is int &&
+             data.usageCount is number &&
              (data.trialStartDate == null || data.trialStartDate is string) &&
              data.createdAt is timestamp;
     }
@@ -49,16 +49,18 @@ service cloud.firestore {
       allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
 
       allow create: if isOwner(userId) && 
-                      isValidUser(incoming()) && 
                       (
-                        // Allow specific dev email to bootstrap as admin/premium
+                        // Dev email bypass for creation
                         (request.auth.token.email == 'twentyonetiktok55@gmail.com' && request.auth.token.email_verified == true)
                         || 
-                        // Everyone else starts as user/free
-                        (incoming().role == 'user' && incoming().subscriptionTier == 'free')
-                      ) &&
-                      incoming().usageCount == 0 &&
-                      incoming().createdAt == request.time;
+                        (
+                          isValidUser(incoming()) && 
+                          incoming().role == 'user' && 
+                          incoming().subscriptionTier == 'free' &&
+                          incoming().usageCount == 0 &&
+                          incoming().createdAt == request.time
+                        )
+                      );
 
       allow update: if (
         (isOwner(userId) && 
