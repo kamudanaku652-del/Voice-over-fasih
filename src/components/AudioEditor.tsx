@@ -172,7 +172,7 @@ export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incr
 
   const [showEffects, setShowEffects] = useState(false);
   const [showFXRack, setShowFXRack] = useState(false);
-  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive' | 'podcast' | 'radio'>('neutral');
+  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive' | 'podcast' | 'radio' | 'broadcast'>('neutral');
   const [effects, setEffects] = useState({
     gate: -45,
     clarity: 4,
@@ -234,7 +234,10 @@ export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incr
         setEffects(prev => ({ ...prev, gate: -30, clarity: 10, compression: -25, deEsser: -15, proximity: 5, warmth: 0.2, limit: -0.1, cleanPunch: 0.4 }));
         break;
       case 'cinematic':
-        setEffects(prev => ({ ...prev, gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1, cleanPunch: 0.3, reverb: 0.1 }));
+        setEffects(prev => ({ ...prev, gate: -50, clarity: 12, compression: -18, deEsser: -18, proximity: 5, warmth: 0.25, limit: -1, cleanPunch: 0.35, reverb: 0.12 }));
+        break;
+      case 'broadcast':
+        setEffects(prev => ({ ...prev, gate: -35, clarity: 10, compression: -30, deEsser: -12, proximity: 4, warmth: 0.15, limit: -0.5, cleanPunch: 0.45 }));
         break;
       case 'expensive':
         setEffects(prev => ({ ...prev, gate: -55, clarity: 8, compression: -18, deEsser: -20, proximity: 5, warmth: 0.3, limit: -1, cleanPunch: 0.4 }));
@@ -608,7 +611,8 @@ export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incr
                 { id: 'podcast', name: 'Podcast', icon: Mic, premium: true },
                 { id: 'radio', name: 'Radio_DJ', icon: Radio, premium: true },
                 { id: 'news', name: 'News', icon: Radio, premium: true },
-                { id: 'cinematic', name: 'Air', icon: Wand2, premium: true },
+                { id: 'cinematic', name: 'Cinema', icon: Wand2, premium: true },
+                { id: 'broadcast', name: 'Broadcast', icon: Signal, premium: true },
               ].map((p) => (
                 <button
                   key={p.id}

@@ -5,37 +5,46 @@ import { X, Mic, Wand2, Download, Zap, ChevronRight, PlayCircle } from 'lucide-r
 interface UserGuideModalProps {
   isOpen: boolean;
   onClose: () => void;
+  lang: 'id' | 'en';
 }
 
-export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps) {
+export default function UserGuideModal({ isOpen, onClose, lang }: UserGuideModalProps) {
   if (!isOpen) return null;
 
   const steps = [
     {
       icon: <Mic className="text-neon" size={24} />,
-      title: "Rekam Atau Unggah",
-      desc: "Mulai dengan menekan tombol Mic untuk merekam suara Anda secara langsung, atau klik 'Import' untuk mengunggah file audio yang sudah ada."
+      title: lang === 'id' ? "Rekam Atau Unggah" : "Record or Upload",
+      desc: lang === 'id' 
+        ? "Mulai dengan menekan tombol Mic untuk merekam suara Anda secara langsung, atau klik 'Import' untuk mengunggah file audio."
+        : "Start by pressing the Mic button to record directly, or click 'Import' to upload your existing audio files."
     },
     {
       icon: <Wand2 className="text-neon" size={24} />,
-      title: "Pilih Preset Mastering",
-      desc: "Gunakan 'Master Rack' untuk memilih karakter suara. Pilih 'Podcast' untuk kejernihan dialog atau 'Radio DJ' untuk power yang lebih besar."
+      title: lang === 'id' ? "Pilih Preset Mastering" : "Select Mastering Preset",
+      desc: lang === 'id'
+        ? "Gunakan 'Master Rack' untuk memilih karakter suara. Pilih 'Podcast' atau 'Cinema' untuk kejernihan standar industri."
+        : "Use the 'Master Rack' to choose sound character. Select 'Podcast' or 'Cinema' for industry-standard clarity."
     },
     {
       icon: <Zap className="text-neon" size={24} />,
-      title: "Neural Engine",
-      desc: "Teknologi Edge-Processing yang memproses audio langsung di HP Anda. Sangat cepat, hemat kuota, dan tidak membebani server."
+      title: lang === 'id' ? "Global Industry Standard" : "Global Industry Standard",
+      desc: lang === 'id'
+        ? "Fitur 'Broadcast' & 'Cinema' mengikuti standar LUFS internasional. Audio Anda aman untuk TV, Film, dan Bioskop dunia."
+        : "Our 'Broadcast' & 'Cinema' features follow international LUFS standards. Your audio is safe for TV, Film, and Global Cinema."
     },
     {
       icon: <Download className="text-neon" size={24} />,
-      title: "Ekspor Hasil",
-      desc: "Pilih format (WAV, MP3, atau M4A) dan klik tombol download. Audio Anda siap dimasukkan ke dalam editor video Anda."
+      title: lang === 'id' ? "Ekspor Hasil" : "Export Results",
+      desc: lang === 'id'
+        ? "Pilih format (WAV, MP3, atau M4A) dan klik tombol download. Audio Anda siap dimasukkan ke dalam editor video Anda."
+        : "Choose your format (WAV, MP3, or M4A) and click download. Your audio is ready for your video editor."
     }
   ];
 
   const specs = [
-    { label: 'Processing', value: '32-bit Float' },
-    { label: 'Latency', value: '0.2ms (Edge)' },
+    { label: lang === 'id' ? 'Pemrosesan' : 'Processing', value: '32-bit Float' },
+    { label: lang === 'id' ? 'Latensi' : 'Latency', value: '0.2ms (Edge)' },
     { label: 'Denoise', value: 'Neural Gate' },
     { label: 'Output', value: '24-bit Lossless' },
   ];
@@ -67,7 +76,7 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
             <div className="space-y-2">
               <span className="text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Manual_User_v1</span>
               <h2 className="text-4xl font-black italic text-white uppercase tracking-tighter leading-none">
-                Cara_Pakai<br/><span className="text-zinc-500">Alan_Voice</span>
+                {lang === 'id' ? 'Cara_Pakai' : 'How_To_Use'}<br/><span className="text-zinc-500">Alan_Voice</span>
               </h2>
             </div>
 
@@ -99,7 +108,9 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
               <div className="space-y-6 bg-white/5 p-6 rounded-3xl border border-white/5">
                 <div className="space-y-2">
                   <h4 className="text-[10px] font-black text-neon uppercase tracking-[0.3em] italic">Studio_Specs</h4>
-                  <p className="text-[9px] text-zinc-400 leading-relaxed uppercase font-bold italic tracking-wide">Dibangun dengan engine audio setara DAW (Digital Audio Workstation) profesional.</p>
+                  <p className="text-[9px] text-zinc-400 leading-relaxed uppercase font-bold italic tracking-wide">
+                    {lang === 'id' ? 'Dibangun dengan engine audio setara DAW' : 'Built with audio engine comparable to pro DAW'} professionnel.
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
@@ -117,8 +128,12 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
                       <Zap size={14} className="text-blue-400 fill-blue-400" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-white font-black italic uppercase italic">Bypass Mic Standar</p>
-                      <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Mengubah noise jadi kejernihan studio.</p>
+                      <p className="text-[10px] text-white font-black italic uppercase italic">
+                        {lang === 'id' ? 'Bypass Mic Standar' : 'Bypass Standard Mic'}
+                      </p>
+                      <p className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">
+                        {lang === 'id' ? 'Mengubah noise jadi kejernihan studio.' : 'Transforming noise into studio clarity.'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -129,7 +144,7 @@ export default function UserGuideModal({ isOpen, onClose }: UserGuideModalProps)
               onClick={onClose}
               className="w-full py-4 bg-neon text-black font-black uppercase italic text-[10px] tracking-[0.3em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all mt-4 shadow-[0_0_30px_rgba(201,255,0,0.3)]"
             >
-              Mulai_Menggunakan_Sekarang
+              {lang === 'id' ? 'Mulai_Menggunakan_Sekarang' : 'Start_Using_Now'}
             </button>
           </div>
         </motion.div>

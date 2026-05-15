@@ -12,6 +12,7 @@ import UserGuideModal from './components/UserGuideModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'studio' | 'library'>('studio');
+  const [lang, setLang] = useState<'id' | 'en'>('id');
   const { user, profile, loading, incrementUsage } = useUserTier();
   const [isSubModalOpen, setIsSubModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -79,11 +80,18 @@ export default function App() {
 
         <div className="flex items-center gap-3 md:gap-6">
           <button 
+            onClick={() => setLang(lang === 'id' ? 'en' : 'id')}
+            className="flex items-center gap-2 px-3 py-1.5 border border-white/10 rounded-full text-[10px] font-black text-zinc-400 uppercase tracking-widest hover:text-neon hover:border-neon/30 transition-all"
+          >
+            <Settings size={12} />
+            {lang === 'id' ? 'Bahasa: ID' : 'Lang: EN'}
+          </button>
+          <button 
             onClick={() => setIsUserGuideOpen(true)}
             className="hidden md:flex items-center gap-2 px-3 py-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest hover:text-neon transition-colors"
           >
             <Info size={14} />
-            Panduan
+            {lang === 'id' ? 'Panduan' : 'Guide'}
           </button>
           {!user ? (
             <button 
@@ -180,7 +188,9 @@ export default function App() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                          <div className="w-2 h-2 bg-neon rounded-full animate-pulse" />
-                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">ID_Documentary_Mode_Active</p>
+                         <p className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-600 italic">
+                           {lang === 'id' ? 'ID_Documentary_Mode_Active' : 'Global_Cinema_Mastering_Active'}
+                         </p>
                       </div>
                       <h2 className="text-4xl md:text-6xl font-black tracking-tight uppercase italic text-white flex items-baseline gap-4">
                         Master<span className="text-neon">_Rack</span>
@@ -382,6 +392,7 @@ export default function App() {
       <UserGuideModal 
         isOpen={isUserGuideOpen}
         onClose={() => setIsUserGuideOpen(false)}
+        lang={lang}
       />
 
       {/* Status Footer */}
