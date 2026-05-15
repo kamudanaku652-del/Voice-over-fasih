@@ -91,7 +91,7 @@ export default function UserGuideModal({ isOpen, onClose, lang }: UserGuideModal
                     className="flex gap-4 group"
                   >
                     <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:border-neon/50 transition-colors">
-                      {React.cloneElement(step.icon as React.ReactElement, { size: 18 })}
+                      {React.cloneElement(step.icon as React.ReactElement<any>, { size: 18 })}
                     </div>
                     <div className="space-y-1">
                       <h3 className="text-[11px] font-black text-white uppercase italic tracking-widest flex items-center gap-2">

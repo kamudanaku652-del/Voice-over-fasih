@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, Type, Gauge, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { Play, Pause, RotateCcw, Type, Gauge, Maximize2, Minimize2, Trash2, Mic } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 
 interface TeleprompterProps {

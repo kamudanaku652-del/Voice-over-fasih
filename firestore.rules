@@ -26,8 +26,9 @@ service cloud.firestore {
              data.email is string && data.email.size() <= 256 &&
              data.subscriptionTier in ['free', 'premium'] &&
              data.role in ['user', 'admin'] &&
+             data.usageCount is int &&
              (data.trialStartDate == null || data.trialStartDate is string) &&
-             data.createdAt is string;
+             data.createdAt is timestamp;
     }
 
     match /users/{userId} {
@@ -40,6 +41,7 @@ service cloud.firestore {
                       isValidUser(incoming()) && 
                       incoming().role == 'user' && // Force 'user' role on creation
                       incoming().subscriptionTier == 'free' &&
+                      incoming().usageCount == 0 &&
                       incoming().createdAt == request.time;
 
       allow update: if (
@@ -49,16 +51,15 @@ service cloud.firestore {
          incoming().role == existing().role &&
          incoming().subscriptionTier == existing().subscriptionTier &&
          incoming().createdAt == existing().createdAt &&
-         // Allowed fields for user update (e.g. profile info if added later)
-         incoming().diff(existing()).affectedKeys().hasOnly(['email', 'trialStartDate']))
+         // Allowed fields for user update
+         incoming().diff(existing()).affectedKeys().hasOnly(['email', 'trialStartDate', 'usageCount']))
         || 
         (isAdmin() && 
          isValidUser(incoming()) &&
-         // Admin can change subscriptionTier, but not the role or UID of others
          incoming().uid == existing().uid &&
          incoming().role == existing().role &&
          incoming().createdAt == existing().createdAt &&
-         incoming().diff(existing()).affectedKeys().hasOnly(['subscriptionTier']))
+         incoming().diff(existing()).affectedKeys().hasOnly(['subscriptionTier', 'usageCount']))
       );
       
       allow delete: if false; // Profiles cannot be deleted via client

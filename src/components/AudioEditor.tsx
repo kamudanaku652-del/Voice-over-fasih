@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones, Radio, Lock, Crown } from 'lucide-react';
+import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones, Radio, Lock, Crown, Signal } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import { Tier } from '../hooks/useUserTier';

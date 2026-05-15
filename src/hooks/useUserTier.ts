@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot, increment } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot, increment, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 export type Tier = 'free' | 'premium';
 
@@ -12,7 +12,7 @@ export interface UserProfile {
   role: 'user' | 'admin';
   usageCount: number;
   trialStartDate: string | null;
-  createdAt: string;
+  createdAt: any; // Can be Timestamp or FieldValue
 }
 
 export function useUserTier() {
@@ -32,10 +32,14 @@ export function useUserTier() {
   const incrementUsage = async () => {
     if (user) {
       const userDocRef = doc(db, 'users', user.uid);
-      // Use Firestore increment to prevent race conditions and local state reset bugs
-      await setDoc(userDocRef, { 
-        usageCount: increment(1) 
-      }, { merge: true });
+      try {
+        // Use Firestore increment to prevent race conditions and local state reset bugs
+        await setDoc(userDocRef, { 
+          usageCount: increment(1) 
+        }, { merge: true });
+      } catch (error) {
+        console.error('Error incrementing usage:', error);
+      }
     } else {
       const newCount = guestUsage + 1;
       setGuestUsage(newCount);
@@ -50,16 +54,19 @@ export function useUserTier() {
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         
         // Listen for real-time updates to profile (e.g. if they upgrade)
-        const unsubProfile = onSnapshot(userDocRef, async (docSnap) => {
+        const unsubProfile = onSnapshot(userDocRef, (docSnap) => {
           if (docSnap.exists()) {
-            const data = docSnap.data() as UserProfile;
+            const data = docSnap.data();
             const isDevEmail = firebaseUser.email === 'twentyonetiktok55@gmail.com';
             
             setProfile({
-              ...data,
+              uid: data.uid || firebaseUser.uid,
+              email: data.email || firebaseUser.email || '',
+              subscriptionTier: isDevEmail ? 'premium' : (data.subscriptionTier || 'free'),
+              role: (isDevEmail || data.role === 'admin') ? 'admin' : 'user',
               usageCount: data.usageCount || 0,
-              subscriptionTier: isDevEmail ? 'premium' : data.subscriptionTier,
-              role: (isDevEmail || data.role === 'admin') ? 'admin' : 'user'
+              trialStartDate: data.trialStartDate || null,
+              createdAt: data.createdAt
             });
           } else {
             const isDevEmail = firebaseUser.email === 'twentyonetiktok55@gmail.com';
@@ -67,18 +74,30 @@ export function useUserTier() {
             const initialRole: 'user' | 'admin' = isDevEmail ? 'admin' : 'user';
 
             // Create initial profile for new user
-            const newProfile: UserProfile = {
+            const newProfileData = {
               uid: firebaseUser.uid,
               email: firebaseUser.email || '',
               subscriptionTier: initialTier,
               role: initialRole,
               usageCount: 0,
               trialStartDate: new Date().toISOString(),
-              createdAt: new Date().toISOString(),
+              createdAt: serverTimestamp(),
             };
-            await setDoc(userDocRef, newProfile);
-            setProfile(newProfile);
+            
+            setDoc(userDocRef, newProfileData).catch(err => {
+              console.error('Error creating user profile:', err);
+            });
+            
+            // Local state update (optimistic or temporary until snapshot hits)
+            setProfile({
+              ...newProfileData,
+              subscriptionTier: initialTier,
+              role: initialRole,
+            } as any);
           }
+          setLoading(false);
+        }, (error) => {
+          console.error('Profile snapshot error:', error);
           setLoading(false);
         });
 

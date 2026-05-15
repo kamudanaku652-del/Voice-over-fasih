@@ -53,17 +53,27 @@ export default function App() {
       const host = window.location.hostname;
       
       if (err.code === 'auth/popup-blocked') {
-        alert('Pop-up login diblokir. Tolong ijinkan pop-up di browser atau coba klik lagi ya Kak!');
+        alert('Pop-up diblokir nih Kak! Coba klik ikon "Buka di Tab Baru" di pojok kanan atas layar ya, biar loginnya lancar.');
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        // User closed, skip alert
       } else if (err.code === 'auth/operation-not-allowed') {
         alert('Metode login ini belum aktif di Firebase Console. Pastikan Google Login sudah di-enable ya.');
       } else if (err.code === 'auth/unauthorized-domain' || err.message?.includes('403')) {
-        const confirmCopy = confirm(`Domain "${host}" belum terdaftar di Firebase Console.\n\nKlik "OK" untuk COPY domain ini, lalu paste di Firebase Console > Authentication > Settings > Authorized Domains ya Kak!`);
+        const vercelDomain = 'voice-over-fasih.vercel.app';
+        const isVercel = host.includes('vercel.app');
+        const domainToRegister = isVercel ? vercelDomain : host;
+        
+        const confirmCopy = confirm(`Domain "${host}" belum terdaftar di Firebase.\n\nTips Sukses:\n1. Copy domain: ${domainToRegister}\n2. Buka Firebase Console > Authentication > Settings > Authorized Domains\n3. Klik "Add Domain" dan paste di sana.\n\nKlik OK untuk COPY domain sekarang ya Kak!`);
         if (confirmCopy) {
-          navigator.clipboard.writeText(host);
-          alert('Domain berhasil di-copy! Silahkan paste di Firebase ya.');
+          navigator.clipboard.writeText(domainToRegister);
+          alert('Domain berhasil di-copy! Silahkan paste di Firebase > Authorized Domains ya.');
         }
+      } else if (err.code === 'auth/api-key-not-valid' || err.message?.includes('api-key-not-valid')) {
+        alert('API Key Firebase tidak valid atau dibatasi.\n\nTips:\n1. Pastikan "Identity Toolkit API" sudah Enabled di Google Cloud Console.\n2. Cek apakah ada pembatasan domain (API Key Restrictions) di GCP Console untuk domain Vercel ini.\n3. Coba buat API Key baru di Firebase Settings > General.');
+      } else if (err.message?.includes('iframe') || err.code?.includes('iframe')) {
+        alert('Gagal login via bingkai. Tolong klik tombol "Buka di Tab Baru" di pojok kanan atas ya Kak!');
       } else {
-        alert('Gagal login. Coba buka di Chrome/Safari atau pastikan domain sudah didaftarkan di Firebase ya Kak!');
+        alert(`Gagal login (${err.code || 'Error'}). Coba buka di Tab Baru atau pastikan domain didaftarkan ya Kak!`);
       }
     }
   };
