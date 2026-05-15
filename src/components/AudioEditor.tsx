@@ -1,13 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import WaveSurfer from 'wavesurfer.js';
-import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones, Radio } from 'lucide-react';
+import { Play, Pause, Square, Mic, Download, Trash2, Wand2, Volume2, Upload, Activity, Headphones, Radio, Lock, Crown } from 'lucide-react';
+import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
+import { Tier } from '../hooks/useUserTier';
 
 interface AudioEditorProps {
   onAudioDataChanges?: (blob: Blob) => void;
+  tier: Tier;
+  usageCount: number;
+  incrementUsage: () => Promise<void>;
+  onShowSubscription: () => void;
 }
 
-export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
+export default function AudioEditor({ onAudioDataChanges, tier, usageCount, incrementUsage, onShowSubscription }: AudioEditorProps) {
   const waveformRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const wavesurfer = useRef<WaveSurfer | null>(null);
@@ -20,7 +26,20 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [vuLevel, setVuLevel] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [exportFormat, setExportFormat] = useState<'wav' | 'mp3' | 'm4a'>('wav');
   const animationFrameRef = useRef<number | null>(null);
+  const [hasUsedInSession, setHasUsedInSession] = useState(false);
+
+  const isPremium = tier === 'premium';
+  const isLimitReached = !isPremium && usageCount >= 10;
+
+  const trackUsage = async () => {
+    if (!isPremium && !hasUsedInSession) {
+      await incrementUsage();
+      setHasUsedInSession(true);
+    }
+  };
 
   // VU Meter Logic - Optimized for performance to prevent stuttering
   const startVuAnalysis = (stream: MediaStream) => {
@@ -69,10 +88,8 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       barWidth: 3,
       barGap: 3,
       barRadius: 2,
-      responsive: true,
       height: 180,
       normalize: true,
-      partialRender: true,
       autoCenter: true,
     });
 
@@ -87,7 +104,12 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   }, []);
 
   const startRecording = async () => {
+    if (isLimitReached) {
+      onShowSubscription();
+      return;
+    }
     try {
+      await trackUsage();
       // Professional constraints to prevent stuttering
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -150,7 +172,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
   const [showEffects, setShowEffects] = useState(false);
   const [showFXRack, setShowFXRack] = useState(false);
-  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive'>('neutral');
+  const [activePreset, setActivePreset] = useState<'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive' | 'podcast' | 'radio'>('neutral');
   const [effects, setEffects] = useState({
     gate: -45,
     clarity: 4,
@@ -161,7 +183,9 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
     limit: -1,
     reverb: 0,
     telephone: false,
-    cleanPunch: 0
+    cleanPunch: 0,
+    pitch: 0,
+    stereoWidth: 1.0
   });
 
   // Audio Context for Processing
@@ -179,8 +203,23 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
   const analyser = useRef<AnalyserNode | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const applyPreset = (type: 'neutral' | 'deep' | 'news' | 'cinematic' | 'expensive') => {
+  const applyPreset = async (type: typeof activePreset) => {
+    if (isLimitReached) {
+      onShowSubscription();
+      return;
+    }
+    // Feature gating for presets
+    const premiumPresets = ['news', 'cinematic', 'expensive', 'podcast', 'radio'];
+    if (premiumPresets.includes(type) && !isPremium) {
+      onShowSubscription();
+      return;
+    }
+
+    setIsProcessing(true);
+    setTimeout(() => setIsProcessing(false), 800); // Simulate instant automatic process
+
     setActivePreset(type);
+    await trackUsage();
     switch(type) {
       case 'deep':
         setEffects(prev => ({ ...prev, gate: -40, clarity: 3, compression: -16, deEsser: -15, proximity: 6, warmth: 0.1, limit: -1, cleanPunch: 0.2 }));
@@ -188,14 +227,20 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       case 'news':
         setEffects(prev => ({ ...prev, gate: -35, clarity: 8, compression: -22, deEsser: -10, proximity: 1, warmth: 0.05, limit: -0.5, cleanPunch: 0.1 }));
         break;
+      case 'podcast':
+        setEffects(prev => ({ ...prev, gate: -40, clarity: 6, compression: -18, deEsser: -12, proximity: 3, warmth: 0.1, limit: -1, cleanPunch: 0.15 }));
+        break;
+      case 'radio':
+        setEffects(prev => ({ ...prev, gate: -30, clarity: 10, compression: -25, deEsser: -15, proximity: 5, warmth: 0.2, limit: -0.1, cleanPunch: 0.4 }));
+        break;
       case 'cinematic':
-        setEffects(prev => ({ ...prev, gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1, cleanPunch: 0.3 }));
+        setEffects(prev => ({ ...prev, gate: -50, clarity: 10, compression: -18, deEsser: -18, proximity: 4, warmth: 0.2, limit: -1, cleanPunch: 0.3, reverb: 0.1 }));
         break;
       case 'expensive':
         setEffects(prev => ({ ...prev, gate: -55, clarity: 8, compression: -18, deEsser: -20, proximity: 5, warmth: 0.3, limit: -1, cleanPunch: 0.4 }));
         break;
       default:
-        setEffects(prev => ({ ...prev, gate: -45, clarity: 4, compression: -12, deEsser: -10, proximity: 2, warmth: 0.05, limit: -1, cleanPunch: 0 }));
+        setEffects(prev => ({ ...prev, gate: -45, clarity: 0, compression: -12, deEsser: -10, proximity: 0, warmth: 0.05, limit: -1, cleanPunch: 0, pitch: 0, reverb: 0 }));
     }
   };
 
@@ -419,11 +464,16 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!audioUrl) return;
+    if (isLimitReached) {
+      onShowSubscription();
+      return;
+    }
+    await trackUsage();
     const link = document.createElement('a');
     link.href = audioUrl;
-    link.download = `VO_PRO_SESSION_${new Date().getTime()}.wav`;
+    link.download = `ALAN_VO_PRO_${new Date().getTime()}.${exportFormat}`;
     link.click();
   };
 
@@ -465,6 +515,24 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
       {/* Waveform Container */}
       <div className="relative bg-[#000] rounded-2xl md:rounded-3xl p-4 md:p-10 border border-studio-border overflow-hidden waveform-shadow ring-1 ring-white/5">
+        {isProcessing && (
+          <div className="absolute inset-0 z-[60] bg-neon/10 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-1 items-end h-8">
+                {[0, 1, 2, 3, 4].map(i => (
+                  <motion.div 
+                    key={i}
+                    animate={{ height: ['20%', '80%', '20%'] }}
+                    transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.1 }}
+                    className="w-1.5 bg-neon rounded-full"
+                  />
+                ))}
+              </div>
+              <span className="text-[12px] font-black text-neon uppercase tracking-[0.5em] italic animate-pulse mt-2">Auto_Engine_Active</span>
+              <p className="text-[8px] font-black text-white/40 uppercase tracking-widest italic">Professional_Mastering_Pipeline</p>
+            </div>
+          </div>
+        )}
         <div ref={waveformRef} className="w-full" />
         
         {/* Frequency Visualizer Overlay */}
@@ -509,7 +577,15 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
 
       {/* Mastering Rack (Conditional) */}
       {showEffects && (
-        <div className="bg-[#000] border border-neon/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700">
+        <div className="bg-[#000] border border-neon/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(201,255,0,0.1)] animate-in fade-in zoom-in-95 duration-700 relative">
+          {!isPremium && (
+            <div className="absolute top-6 right-12 z-20">
+               <div className="flex items-center gap-2 px-4 py-2 border border-blue-400/50 bg-blue-400/10 text-blue-400 rounded-full text-[10px] font-black uppercase tracking-widest animate-pulse">
+                  <Crown size={12} /> Mode_Premium_Terkunci
+               </div>
+            </div>
+          )}
+
           {/* Preset Selector */}
           <div className="flex flex-col gap-4 md:gap-6">
             <div className="flex justify-between items-center">
@@ -526,22 +602,25 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             </div>
             <div className="flex flex-wrap gap-2 md:gap-4">
               {[
-                { id: 'neutral', name: 'Raw', icon: Activity },
-                { id: 'deep', name: 'Deep', icon: Headphones },
-                { id: 'news', name: 'News', icon: Radio },
-                { id: 'cinematic', name: 'Air', icon: Wand2 },
-                { id: 'expensive', name: 'Pro', icon: Mic }
+                { id: 'neutral', name: 'Raw', icon: Activity, premium: false },
+                { id: 'deep', name: 'Deep', icon: Headphones, premium: false },
+                { id: 'expensive', name: 'Pro', icon: Mic, premium: true },
+                { id: 'podcast', name: 'Podcast', icon: Mic, premium: true },
+                { id: 'radio', name: 'Radio_DJ', icon: Radio, premium: true },
+                { id: 'news', name: 'News', icon: Radio, premium: true },
+                { id: 'cinematic', name: 'Air', icon: Wand2, premium: true },
               ].map((p) => (
                 <button
                   key={p.id}
                   onClick={() => applyPreset(p.id as any)}
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-4 px-3 md:px-6 rounded-xl md:rounded-2xl border transition-all font-black text-[9px] md:text-xs uppercase italic tracking-widest min-w-[100px] md:min-w-[200px]",
+                    "flex-1 flex items-center justify-center gap-2 md:gap-3 py-3 md:py-4 px-3 md:px-6 rounded-xl md:rounded-2xl border transition-all font-black text-[9px] md:text-xs uppercase italic tracking-widest min-w-[100px] md:min-w-[150px] relative",
                     activePreset === p.id 
                       ? "bg-neon border-neon text-black shadow-[0_0_30px_#C9FF00]" 
                       : "bg-[#111] border-studio-border text-zinc-500 hover:border-neon/50 hover:text-white"
                   )}
                 >
+                  {p.premium && !isPremium && <Lock size={10} className="absolute top-2 right-2 text-zinc-700" />}
                   <p.icon size={14} className="md:w-4 md:h-4" />
                   {p.name}
                 </button>
@@ -550,9 +629,9 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-12 border-t border-studio-border pt-8 md:pt-12">
-            <div className="lg:col-span-1 space-y-4 md:space-y-6 bg-neon/5 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-neon/20 shadow-[0_0_40px_rgba(201,255,0,0.05)]">
+            <div className="lg:col-span-1 space-y-4 md:space-y-6 bg-neon/10 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-neon/30 shadow-[0_0_40px_rgba(201,255,0,0.1)]">
               <div className="flex justify-between items-center">
-                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Peredam_Otomatis</span>
+                <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.4em] text-neon italic">Neural_Denoiser</span>
                 <span className="text-neon font-mono text-[10px] md:text-xs">{Math.abs(effects.gate)}%</span>
               </div>
               <input 
@@ -561,21 +640,23 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 onChange={(e) => setEffects({...effects, gate: parseInt(e.target.value)})}
                 className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
               />
-              <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest italic leading-relaxed">Menghilangkan desis & kebisingan ruangan</p>
+              <p className="text-[9px] text-zinc-400 uppercase font-bold tracking-widest italic leading-relaxed">Studio-grade background noise removal</p>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Penghilang_Hiss</span>
-                <span className="text-neon font-mono text-xs">{effects.deEsser}dB</span>
+            <div className="space-y-6 bg-white/5 p-4 rounded-2xl">
+               <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Pitch_Morph</span>
+                {!isPremium && <Lock size={10} className="text-zinc-700" />}
+                <span className="text-neon font-mono text-xs">{effects.pitch.toFixed(1)}</span>
               </div>
               <input 
-                type="range" min="-40" max="0" step="1" 
-                value={effects.deEsser} 
-                onChange={(e) => setEffects({...effects, deEsser: parseInt(e.target.value)})}
-                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
+                type="range" min="-12" max="12" step="0.1" 
+                disabled={!isPremium}
+                value={effects.pitch} 
+                onChange={(e) => setEffects({...effects, pitch: parseFloat(e.target.value)})}
+                className={cn("w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none", !isPremium ? "opacity-20" : "cursor-pointer")} 
               />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Menghapus suara tajam (S/T)</p>
+               <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Ganti karakter suara (Tebal/Tipis)</p>
             </div>
 
             <div className="space-y-6">
@@ -592,32 +673,29 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
               <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Suara berat ala Narator</p>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-6 relative group">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Kejernihan_Vokal</span>
                 <span className="text-neon font-mono text-xs">+{effects.clarity}dB</span>
               </div>
-              <input 
-                type="range" min="0" max="30" step="1" 
-                value={effects.clarity} 
-                onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
-                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
-              />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Suara lebih fasih & jelas</p>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-500 italic">Kesan_Premium</span>
-                <span className="text-neon font-mono text-xs">{(effects.warmth * 100).toFixed(0)}%</span>
+              <div className="relative">
+                <input 
+                  type="range" min="0" max="30" step="1" 
+                  disabled={!isPremium}
+                  value={effects.clarity} 
+                  onChange={(e) => setEffects({...effects, clarity: parseInt(e.target.value)})}
+                  className={cn("w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-not-allowed", !isPremium ? "opacity-20" : "cursor-pointer")} 
+                />
+                {!isPremium && (
+                  <div 
+                    onClick={onShowSubscription}
+                    className="absolute inset-0 cursor-pointer flex items-center justify-center"
+                  >
+                    <Lock size={12} className="text-zinc-700 hover:text-neon transition-colors" />
+                  </div>
+                )}
               </div>
-              <input 
-                type="range" min="0" max="2" step="0.1" 
-                value={effects.warmth} 
-                onChange={(e) => setEffects({...effects, warmth: parseFloat(e.target.value)})}
-                className="w-full accent-neon bg-zinc-900 h-1.5 rounded-lg appearance-none cursor-pointer" 
-              />
-              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Warna suara studio mahal</p>
+              <p className="text-[9px] text-zinc-700 uppercase font-bold tracking-widest">Suara lebih fasih & jelas</p>
             </div>
 
             <div className="space-y-6">
@@ -638,7 +716,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
       )}
 
       {/* FX RACK (Space & Lo-Fi) */}
-      {showFXRack && (
+      {showFXRack && isPremium && (
         <div className="bg-[#000] border border-blue-500/20 rounded-2xl md:rounded-[40px] p-6 md:p-12 space-y-8 md:space-y-12 shadow-[0_0_120px_rgba(59,130,246,0.1)] animate-in fade-in zoom-in-95 duration-700">
           <div className="flex justify-between items-center">
              <p className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.3em] md:tracking-[0.5em] text-zinc-600 italic">Sound_Design_FX_Rack</p>
@@ -704,7 +782,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
               onClick={stopRecording}
               className="flex items-center gap-3 md:gap-4 bg-white text-black px-6 md:px-10 py-3 md:py-5 rounded-full hover:scale-105 active:scale-95 transition-all font-black italic uppercase tracking-tighter"
             >
-              <Square size={16} md:size={20} fill="black" />
+              <Square size={20} fill="black" />
               <span className="text-sm md:text-lg whitespace-nowrap">Stop_Rec</span>
             </button>
           )}
@@ -716,7 +794,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             onClick={togglePlayback}
             className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] hover:border-neon/50 disabled:opacity-20 transition-all border border-studio-border text-white shadow-2xl"
           >
-            {isPlaying ? <Pause size={24} md:size={32} fill="white" /> : <Play size={24} md:size={32} fill="white" className="ml-1" />}
+            {isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" className="ml-1" />}
           </button>
           
           <input 
@@ -731,7 +809,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-[#111] hover:bg-[#222] border border-studio-border text-zinc-500 hover:text-white transition-all shadow-xl hover:scale-110"
             title="Import Audio File"
           >
-            <Upload size={20} md:size={24} />
+            <Upload size={24} />
           </button>
         </div>
 
@@ -740,6 +818,10 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             <button
               title="Studio Mastering Rack"
               onClick={() => {
+                if (isLimitReached) {
+                  onShowSubscription();
+                  return;
+                }
                 setShowEffects(!showEffects);
                 setShowFXRack(false);
               }}
@@ -748,31 +830,59 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
                 showEffects ? "bg-neon text-black border-neon" : "bg-[#111] text-zinc-500 border-studio-border hover:text-neon"
               )}
             >
-              <Wand2 size={20} md:size={24} />
+              <Wand2 size={24} />
             </button>
             <button
               title="FX Sound Design Rack"
               onClick={() => {
+                if (!isPremium) {
+                  onShowSubscription();
+                  return;
+                }
                 setShowFXRack(!showFXRack);
                 setShowEffects(false);
               }}
               className={cn(
-                "p-3 md:p-4 rounded-xl md:rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95",
+                "p-3 md:p-4 rounded-xl md:rounded-2xl transition-all border shadow-xl hover:scale-110 active:scale-95 relative",
                 showFXRack ? "bg-blue-500 text-black border-blue-500 shadow-[0_0_20px_rgba(59,130,246,0.3)]" : "bg-[#111] text-zinc-500 border-studio-border hover:text-blue-500"
               )}
             >
-              <Activity size={20} md:size={24} />
+              {!isPremium && <Lock size={10} className="absolute top-1 right-1 text-zinc-700" />}
+              <Activity size={24} />
             </button>
           </div>
           
           <div className="h-10 md:h-12 w-px bg-studio-border mx-1 md:mx-2" />
           
+          <div className="flex bg-[#111] rounded-xl md:rounded-2xl border border-studio-border p-1">
+            {['wav', 'mp3', 'm4a'].map((fmt) => (
+              <button
+                key={fmt}
+                onClick={() => {
+                  if (fmt !== 'wav' && !isPremium) {
+                    onShowSubscription();
+                    return;
+                  }
+                  setExportFormat(fmt as any);
+                }}
+                className={cn(
+                  "px-3 md:px-4 py-2 md:py-3 text-[10px] font-black uppercase italic tracking-widest rounded-lg md:rounded-xl transition-all",
+                  exportFormat === fmt 
+                    ? "bg-neon text-black" 
+                    : "text-zinc-600 hover:text-white"
+                )}
+              >
+                {fmt}
+              </button>
+            ))}
+          </div>
+
           <button
             disabled={!audioUrl}
             onClick={handleDownload}
             className="px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl bg-[#111] hover:bg-neon hover:text-black font-black italic uppercase tracking-tighter disabled:opacity-20 transition-all border border-studio-border text-zinc-500 shadow-xl group"
           >
-            <Download size={18} md:size={20} className="inline mr-2 md:mr-3 mb-1 group-hover:-translate-y-1 transition-transform" />
+            <Download size={20} className="inline mr-2 md:mr-3 mb-1 group-hover:-translate-y-1 transition-transform" />
             <span className="text-xs md:text-base">Export</span>
           </button>
           
@@ -782,7 +892,7 @@ export default function AudioEditor({ onAudioDataChanges }: AudioEditorProps) {
             onClick={clearAudio}
             className="p-3 md:p-4 rounded-xl md:rounded-2xl bg-[#111] hover:bg-red-900/20 disabled:opacity-10 transition-all border border-studio-border text-zinc-500 hover:text-red-500 hover:scale-110 active:scale-95"
           >
-            <Trash2 size={20} md:size={24} />
+            <Trash2 size={24} />
           </button>
         </div>
       </div>

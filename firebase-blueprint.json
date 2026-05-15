@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "App user profile and subscription status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "subscriptionTier": { "type": "string", "enum": ["free", "premium"] },
+        "usageCount": { "type": "integer", "minimum": 0 },
+        "trialStartDate": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "subscriptionTier", "createdAt"]
+    },
+    "VoiceEdit": {
+      "title": "Voice Edit",
+      "description": "Metadata for a saved voice recording session",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "effects": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "effects", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "users/{userId}/edits/{editId}": {
+      "schema": "VoiceEdit",
+      "description": "User's saved voice edits"
+    }
+  }
+}

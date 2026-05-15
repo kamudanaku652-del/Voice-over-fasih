@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Primitives
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function isAdmin() { 
+      // Look up role in the users collection for the current auth user
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    // 3. User Blueprint
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.subscriptionTier in ['free', 'premium'] &&
+             data.role in ['user', 'admin'] &&
+             (data.trialStartDate == null || data.trialStartDate is string) &&
+             data.createdAt is string;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      
+      // Prevent query scraping by enforcing UID check in list
+      allow list: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+
+      allow create: if isOwner(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().role == 'user' && // Force 'user' role on creation
+                      incoming().subscriptionTier == 'free' &&
+                      incoming().createdAt == request.time;
+
+      allow update: if (
+        (isOwner(userId) && 
+         isValidUser(incoming()) && 
+         // User cannot change their own role or subscription status
+         incoming().role == existing().role &&
+         incoming().subscriptionTier == existing().subscriptionTier &&
+         incoming().createdAt == existing().createdAt &&
+         // Allowed fields for user update (e.g. profile info if added later)
+         incoming().diff(existing()).affectedKeys().hasOnly(['email', 'trialStartDate']))
+        || 
+        (isAdmin() && 
+         isValidUser(incoming()) &&
+         // Admin can change subscriptionTier, but not the role or UID of others
+         incoming().uid == existing().uid &&
+         incoming().role == existing().role &&
+         incoming().createdAt == existing().createdAt &&
+         incoming().diff(existing()).affectedKeys().hasOnly(['subscriptionTier']))
+      );
+      
+      allow delete: if false; // Profiles cannot be deleted via client
+    }
+  }
+}
