@@ -310,6 +310,10 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
     draw();
   };
 
+  const [isBypassed, setIsBypassed] = useState(false);
+  const bypassGain = useRef<GainNode | null>(null);
+  const wetGain = useRef<GainNode | null>(null);
+
   // Initialize Audio Processing Chain
   useEffect(() => {
     if (wavesurfer.current) {
@@ -322,6 +326,12 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
           
           analyser.current = audioCtx.current.createAnalyser();
           analyser.current.fftSize = 256;
+
+          // Gain nodes for Before/After crossfade
+          bypassGain.current = audioCtx.current.createGain();
+          wetGain.current = audioCtx.current.createGain();
+          bypassGain.current.gain.value = 0;
+          wetGain.current.gain.value = 1;
 
           proximityEq.current = audioCtx.current.createBiquadFilter();
           proximityEq.current.type = 'lowshelf';
@@ -371,8 +381,18 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
 
           const mainOutput = audioCtx.current.createGain();
 
-          // Chain: Source -> analyser -> deBox -> DeEsser -> mainOutput
+          // ----------------------------------------------------
+          // RUTERING (Routing Architecture)
+          // ----------------------------------------------------
+          
+          // Split Path: source connects to BOTH wet and bypass chains
           source.connect(analyser.current);
+          
+          // Path A: DRY/BYPASS
+          source.connect(bypassGain.current);
+          bypassGain.current.connect(audioCtx.current.destination);
+
+          // Path B: WET/PROCESSED
           analyser.current.connect(deBoxEq.current);
           deBoxEq.current.connect(deEsser.current);
           
@@ -391,13 +411,30 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
           clarityEq.current.connect(compressor.current);
           compressor.current.connect(gainNode);
           gainNode.connect(limiter.current);
-          limiter.current.connect(audioCtx.current.destination);
+          
+          // Connect end of wet chain to wetGain
+          limiter.current.connect(wetGain.current);
+          wetGain.current.connect(audioCtx.current.destination);
 
           drawVisualizer();
         }
       });
     }
   }, []);
+
+  // Update bypass logic
+  useEffect(() => {
+    if (bypassGain.current && wetGain.current && audioCtx.current) {
+      const now = audioCtx.current.currentTime;
+      if (isBypassed) {
+        bypassGain.current.gain.setTargetAtTime(1, now, 0.02);
+        wetGain.current.gain.setTargetAtTime(0, now, 0.02);
+      } else {
+        bypassGain.current.gain.setTargetAtTime(0, now, 0.02);
+        wetGain.current.gain.setTargetAtTime(1, now, 0.02);
+      }
+    }
+  }, [isBypassed]);
 
   // Update Effects in Real-time
   useEffect(() => {
@@ -816,6 +853,29 @@ export default function AudioEditor({ onAudioDataChanges, onExport, tier, user, 
           )}
 
           <div className="h-10 md:h-12 w-px bg-studio-border mx-1 md:mx-2" />
+          
+          {audioUrl && (
+            <div className="flex bg-[#111] rounded-xl md:rounded-2xl border border-studio-border p-1">
+              <button 
+                onClick={() => setIsBypassed(true)}
+                className={cn(
+                  "px-4 py-2 text-[10px] font-black uppercase italic tracking-widest rounded-lg transition-all",
+                  isBypassed ? "bg-zinc-800 text-white" : "text-zinc-600 hover:text-zinc-400"
+                )}
+              >
+                Before
+              </button>
+              <button 
+                onClick={() => setIsBypassed(false)}
+                className={cn(
+                  "px-4 py-2 text-[10px] font-black uppercase italic tracking-widest rounded-lg transition-all",
+                  !isBypassed ? "bg-neon text-black" : "text-zinc-600 hover:text-zinc-400"
+                )}
+              >
+                After
+              </button>
+            </div>
+          )}
 
           <button
             disabled={!audioUrl}
